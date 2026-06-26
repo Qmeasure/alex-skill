@@ -4,3 +4,5 @@ __MACOSX/
 *.zip
 .claude/
 CLAUDE.md
+__pycache__/
+*.pyc
