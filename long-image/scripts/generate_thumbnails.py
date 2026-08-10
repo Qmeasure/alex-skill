@@ -124,7 +124,7 @@ def update_json(
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Generate or import page thumbnails for mobile-share-map."
+        description="Generate or import page thumbnails for long-image."
     )
     parser.add_argument("input", help="Input JSON file.")
     parser.add_argument(

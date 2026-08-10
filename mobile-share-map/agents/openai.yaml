@@ -1,4 +1,0 @@
-interface:
-  display_name: "手机转发研究长图"
-  short_description: "将长篇研究按投资敏感度生成单版或内外双版手机研究长图"
-  default_prompt: "使用 $mobile-share-map 将这份材料转换为手机研究长图，并按是否含具体标的投资建议选择单版或内外双版。"

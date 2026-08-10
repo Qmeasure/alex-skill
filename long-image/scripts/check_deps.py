@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pre-flight dependency check for mobile-share-map skill. Zero external deps."""
+"""Pre-flight dependency check for long-image skill. Zero external deps."""
 
 from __future__ import annotations
 
@@ -121,7 +121,7 @@ def check_render_script() -> bool:
 
 
 def main() -> int:
-    print(f"\n{BOLD}mobile-share-map 依赖检查{RESET}")
+    print(f"\n{BOLD}long-image 依赖检查{RESET}")
     print(f"  skill 路径: {SKILL_ROOT}\n")
 
     errors = 0

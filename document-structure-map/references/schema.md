@@ -35,7 +35,7 @@ Use this schema as the handoff between document analysis and visual rendering. K
 }
 ```
 
-`style.preset` 固定使用 `reference` 或省略；该 skill 专注于文档插入/打印版。需要生成手机转发长图时，使用 `$mobile-share-map`。
+`style.preset` 固定使用 `reference` 或省略；该 skill 专注于文档插入/打印版。需要生成手机转发长图时，使用 `$long-image`。
 
 Allowed `tone` values: `blue`, `amber`, `green`, `pink`, `cyan`, `purple`, `orange`, `gray`. If omitted, the renderer cycles colors.
 

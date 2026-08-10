@@ -1,6 +1,6 @@
 ---
 name: document-structure-map
-description: "将 PDF、DOCX、Markdown 笔记、网页、图片、访谈记录、报告或其他长文档转为适合打印或插入文档的纵向结构图 HTML/长图。提炼论证骨架、章节层级、核心观点、证据、表格、矩阵和生态图，并使用左侧时间轴与浅色观点条排版。适用于总截图、长图总结、文档总图、结构化图解、一图看懂、research map 或 one-page visual brief。手机转发长图请使用 $mobile-share-map。"
+description: "将 PDF、DOCX、Markdown 笔记、网页、图片、访谈记录、报告或其他长文档转为适合打印或插入文档的纵向结构图 HTML/长图。提炼论证骨架、章节层级、核心观点、证据、表格、矩阵和生态图，并使用左侧时间轴与浅色观点条排版。适用于总截图、长图总结、文档总图、结构化图解、一图看懂、research map 或 one-page visual brief。手机转发长图请使用 $long-image。"
 ---
 
 # 文档结构图（打印/文档版）

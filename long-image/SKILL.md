@@ -1,6 +1,6 @@
 ---
-name: mobile-share-map
-description: "将 PDF、DOCX、Markdown、网页、图片、访谈记录、报告或其他长文档转为适合微信、公众号和手机转发的 1080px 研究长图。先判断内容是否包含针对特定可交易标的的投资建议、评级、估值、目标价、仓位或交易判断：中性行业/公司/知识整理生成单版；存在投资敏感内容时生成 Internal 与 External 双版；无法判断时先询问用户。适用于手机转发长图、公众号长图、微信长图、研究摘要。打印/文档结构图请使用 $document-structure-map。"
+name: long-image
+description: "将 PDF、DOCX、Markdown、网页、图片等任意来源的长内容转为 1080px 竖版研究长图。内容含具体标的的投资建议、评级、估值或目标价时生成 Internal/External 双版，否则生成单版；无法判断时先询问用户。打印/文档结构图请使用 $document-structure-map。"
 ---
 
 # 线图

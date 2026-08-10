@@ -14,7 +14,7 @@
 | 复盘上周推荐的股票 | [`pitch-review`](./pitch-review/SKILL.md) | 带行情图的 Markdown 复盘报告 | 不做全市场选股、首次覆盖或估值建模 |
 | 把投资研讨录音转成 Gamma/PPT 大纲 | [`gamma-ppt-outline`](./gamma-ppt-outline/SKILL.md) | 可导入 Gamma 的 Markdown 大纲 | 不输出会议纪要，也不处理没有转录文本的音频 |
 | 把长文档整理成适合打印或插入报告的结构图 | [`document-structure-map`](./document-structure-map/SKILL.md) | 纵向结构图 HTML/长图 | 不适合手机转发长图 |
-| 把研究材料做成微信、公众号或手机长图 | [`mobile-share-map`](./mobile-share-map/SKILL.md) | 1080px 竖版长图，必要时 Internal/External 双版 | 不适合打印版结构图 |
+| 把研究材料做成微信、公众号或手机长图 | [`long-image`](./long-image/SKILL.md) | 1080px 竖版长图，必要时 Internal/External 双版 | 不适合打印版结构图 |
 | 把文本做成一张逻辑树思维导图 | [`text-to-mindmap`](./text-to-mindmap/SKILL.md) | 竖向逻辑树 PNG | 不输出 XMind/FreeMind，也不做横向或放射状导图 |
 | 把文章、报告或数据贴做成多页轮播图片卡片 | [`carousel-image-renderer`](./carousel-image-renderer/SKILL.md) | 1080×1440 PNG 卡片组和 `manifest.json` | 不输出交互网页，也不改写事实 |
 | 核查一篇已有文稿里的数字和事实 | [`doc-data-verify`](./doc-data-verify/SKILL.md) | 6 字段核查表、可确认的修正稿 | 不适合没有事实数据的纯润色 |
@@ -38,7 +38,7 @@
 - **“复盘上周推票”**：用 `pitch-review`。它验证既有推荐是否兑现，不修改原推票，也不替用户重新选股。
 - **“录音整理成 PPT/Gamma”**：用 `gamma-ppt-outline`。必须有 `txt` 或 `srt` 转录文本；内容只能来自录音。
 - **“一图看懂这份长文档的结构”**：用 `document-structure-map`。重点是论证骨架、证据链、风险和章节关系。
-- **“做成手机上看的研究长图”**：用 `mobile-share-map`。有针对具体标的的评级、估值、目标价或交易建议时，生成 Internal/External 双版。
+- **“做成手机上看的研究长图”**：用 `long-image`。有针对具体标的的评级、估值、目标价或交易建议时，生成 Internal/External 双版。
 - **“做一张思维导图图片”**：用 `text-to-mindmap`。输出固定为竖向逻辑树 PNG。
 - **“做多页轮播图文卡片”**：用 `carousel-image-renderer`。输出多张 1080×1440 PNG，支持 `classic`、`finance`、`editorial`、`tech` 主题。
 
@@ -69,12 +69,12 @@
 ### 三种文档可视化 Skill
 
 - `document-structure-map`：打印或放进报告，关注长文档的论证结构。
-- `mobile-share-map`：手机和微信转发，固定 1080px 宽，按投资敏感内容决定单版或双版。
+- `long-image`：手机和微信转发，固定 1080px 宽，按投资敏感内容决定单版或双版。
 - `text-to-mindmap`：一张 PNG 思维导图，固定竖向逻辑树布局。
 
 ### 两种社交图文 Skill
 
-- `mobile-share-map` 是一张可向下延伸的研究长图，适合完整内容摘要和合规分版。
+- `long-image` 是一张可向下延伸的研究长图，适合完整内容摘要和合规分版。
 - `carousel-image-renderer` 是多张固定尺寸卡片，适合文章、报告和数据贴的分页阅读。
 
 ### `verify-before-answer` 和 `doc-data-verify`

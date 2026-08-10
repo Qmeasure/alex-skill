@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Post-render verification for mobile-share-map outputs."""
+"""Post-render verification for long-image outputs."""
 
 from __future__ import annotations
 
@@ -232,7 +232,7 @@ def check_file_count(output_dir: Path, stem: str, policy: str) -> tuple[bool, li
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Verify rendered mobile-share-map outputs.")
+    parser = argparse.ArgumentParser(description="Verify rendered long-image outputs.")
     parser.add_argument("input", help="Input JSON file (same as passed to render).")
     parser.add_argument("--output-dir", help="Output directory. Defaults to the input directory.")
     args = parser.parse_args()
@@ -252,7 +252,7 @@ def main() -> int:
     stem = input_path.stem
     errors = 0
 
-    print(f"\n{BOLD}mobile-share-map 输出验收{RESET}")
+    print(f"\n{BOLD}long-image 输出验收{RESET}")
     print(f"  模式: {policy}  输入: {input_path.name}\n")
 
     # --- 文件检查 ---

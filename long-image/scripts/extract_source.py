@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Extract source document content for the mobile-share-map workflow.
+"""Extract source document content for the long-image workflow.
 
 PDF/DOCX → PaddleOCR API → Markdown + images
 HTML      → copy as-is
@@ -232,7 +232,7 @@ def extract_html(source: Path, output_dir: Path) -> Path:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Extract source document content for mobile-share-map."
+        description="Extract source document content for long-image."
     )
     parser.add_argument("source", help="Source document (PDF, DOCX, or HTML).")
     parser.add_argument(
