@@ -9,6 +9,10 @@ const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const SKILL_DIR = path.resolve(SCRIPT_DIR, "..");
 const PAGE_WIDTH = 1080;
 const PAGE_HEIGHT = 1440;
+// 正文页填充率红线：低于 FILL_ERROR_THRESHOLD 渲染失败（几乎只能是 :::pagebreak 滥用），
+// 低于 FILL_WARNING_THRESHOLD 打警告（可能是不可拆块进位，需自查）。
+const FILL_ERROR_THRESHOLD = 0.6;
+const FILL_WARNING_THRESHOLD = 0.75;
 const SUPPORTED_THEMES = new Set(["classic", "finance", "editorial", "tech"]);
 const SUPPORTED_ENDCARD_VARIANTS = new Set(["guided", "legacy"]);
 
@@ -765,6 +769,20 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
         console.error(`  page ${index + 1} [${marker}] content ${size.used}px / limit ${size.max}px :: head: ${head} :: tail: ${tail}`);
       }
       throw new Error(`Content overflow on rendered page(s): ${report.overflowPages.join(", ")}. Shorten the oversized block or insert a page break.`);
+    }
+
+    // 正文页填充率检查（导流页与最后一页正文页由 runtime 标记豁免）。
+    const percent = (value) => `${Math.round(value * 100)}%`;
+    const sparsePages = (report.fillRatios || []).filter((entry) => !entry.last && entry.fill < FILL_WARNING_THRESHOLD);
+    sparsePages.filter((entry) => entry.fill >= FILL_ERROR_THRESHOLD).forEach((entry) => {
+      const message = `Body page ${entry.page} is only ${percent(entry.fill)} full (warning threshold ${percent(FILL_WARNING_THRESHOLD)}). Check for unnecessary :::pagebreak or rebalance content.`;
+      validation.warnings.push(message);
+      process.stderr.write(`Warning: ${message}\n`);
+    });
+    const sparseErrors = sparsePages.filter((entry) => entry.fill < FILL_ERROR_THRESHOLD);
+    if (sparseErrors.length) {
+      const detail = sparseErrors.map((entry) => `page ${entry.page} filled ${percent(entry.fill)}`).join(", ");
+      throw new Error(`Sparse body page(s): ${detail} (minimum ${percent(FILL_ERROR_THRESHOLD)}). Remove manual :::pagebreak or rebalance content so body pages stay full.`);
     }
 
     const cards = page.locator(".page-card");

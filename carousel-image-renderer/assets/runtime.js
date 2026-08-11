@@ -46,7 +46,7 @@
   }
 
   // 供封面（cover.js）与末页（endcard.js）脚本使用的共享上下文。
-  const ctx = { data, root, pageRecords, element, textElement, createBrand, BRAND_TAGLINE };
+  const ctx = { data, root, pageRecords, element, textElement, createBrand, createBodyPage, BRAND_TAGLINE };
 
   function renderList(block, nested = false) {
     const list = element(block.ordered ? "ol" : "ul", nested ? "nested-list" : "content-block list-block");
@@ -224,16 +224,33 @@
     pageRecords.splice(pageRecords.indexOf(current), 1);
   }
 
+  // 导流块独立成页（由 endcard.js 自建页），需先创建再统一编页码。
+  window.__carouselEndcard.appendEndBlock(ctx, thumbnailsBlock);
+
   pageRecords.forEach((record, index) => {
     const pageNumber = record.page.querySelector(".page-number");
     if (pageNumber) pageNumber.textContent = String(index + 1).padStart(2, "0");
   });
 
-  window.__carouselEndcard.appendEndBlock(ctx, thumbnailsBlock);
-
+  // 填充率只统计正文页：导流页（isEndcard）与内容自然结束的最后一页正文页豁免。
+  // 注意 flow 有 overflow:hidden，scrollHeight 不会小于 clientHeight，
+  // 必须用末个子元素底边相对 flow 顶边的距离来量内容实际占用高度。
+  function fillRatio(record) {
+    const flow = record.flow;
+    const lastChild = flow.lastElementChild;
+    if (!lastChild || !flow.clientHeight) return 1;
+    const used = lastChild.getBoundingClientRect().bottom - flow.getBoundingClientRect().top;
+    return used / flow.clientHeight;
+  }
+  const fillBodyRecords = pageRecords.filter((record) => record.flow && !record.isEndcard);
   window.__renderReport = {
     pageCount: pageRecords.length,
-    overflowPages: pageRecords.map((record, index) => record.flow && overflows(record) ? index + 1 : null).filter(Boolean)
+    overflowPages: pageRecords.map((record, index) => record.flow && overflows(record) ? index + 1 : null).filter(Boolean),
+    fillRatios: fillBodyRecords.map((record, index) => ({
+      page: pageRecords.indexOf(record) + 1,
+      fill: fillRatio(record),
+      last: index === fillBodyRecords.length - 1
+    }))
   };
   document.body.dataset.renderReady = "true";
 })();

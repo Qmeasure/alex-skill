@@ -707,6 +707,25 @@ del {
   margin-top: 32px;
 }
 
+/* 导流块固定独立成页：缩略图靠上、品牌卡用 auto 边距垂直居中、免责声明沉底。 */
+.endcard-page .page-flow {
+  display: flex;
+  flex-direction: column;
+}
+
+.endcard-page .end-block {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-top: 0;
+  padding: 24px 0 32px;
+}
+
+.endcard-page .brand-card {
+  margin-top: auto;
+  margin-bottom: auto;
+}
+
 .brand-card {
   display: flex;
   align-items: center;
@@ -741,8 +760,8 @@ del {
 }
 
 .brand-card-qr-image {
-  width: 140px;
-  height: 140px;
+  width: 200px;
+  height: 200px;
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 8px;
   background: #fff;

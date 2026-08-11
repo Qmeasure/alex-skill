@@ -98,7 +98,7 @@ python "<skill-dir>/scripts/preflight.py"
 
 三层之间尽量不要重复信息。kicker 已有的内容（如机构名、会议类型），subtitle 不再写。
 
-#### 结尾缩略图
+#### 结尾缩略图与导流页
 
 正文内容结束后，使用 `:::thumbnails` 指令插入信源缩略图。渲染器会自动生成带标题、网格布局和引导文案的缩略图页面，不需要手动排版。只需提供图片：
 
@@ -108,6 +108,8 @@ python "<skill-dir>/scripts/preflight.py"
 ![](./source-page2.png)
 :::
 ```
+
+**导流块固定独立成最后一页**：信源缩略图、品牌卡（含群二维码与截图指引）和免责声明共同组成一个专门的导流页，与正文分页完全解耦。写正文时不需要为导流块预留任何空间，也不要为它调整内容量或插入分页。
 
 缩略图提取规则：
 
@@ -121,7 +123,7 @@ python "<skill-dir>/scripts/preflight.py"
 
 - 文章标题只出现在封面。每个正文页以自己的 section 标题或内容块开头。
 - 标题和后续解释要紧挨在一起。
-- **默认不加 `:::pagebreak`**。渲染器的自动分页会把内容排满再换页，手动分页几乎总是造成页面底部大面积空白。只在自动分页产生了不可接受的叙事断点时，才插入极少量手动分页。写完初稿后先不加任何 pagebreak 渲染一次，确认哪些断点确实需要调整，再有针对性地插入。
+- **默认不加 `:::pagebreak`**。渲染器的自动分页会把内容排满再换页，手动分页几乎总是造成页面底部大面积空白。**渲染器会硬性检查每个正文页的填充率**：低于 60% 直接渲染失败（这几乎只能是滥用 `:::pagebreak` 导致），60–75% 会打出警告要求自查；内容自然结束的最后一页正文页和导流页豁免。只在自动分页产生了不可接受的叙事断点时，才插入极少量手动分页——写完初稿后先不加任何 pagebreak 渲染一次，确认哪些断点确实需要调整，再有针对性地插入。
 - 段落要精炼。渲染器按语义块分页，不会拆分表格、指标组、图片、代码块或 marker。
 - 同一页不超过三种强调样式，否则显得杂乱。
 - 优先使用 Markdown 而非原始 HTML。
@@ -153,12 +155,12 @@ node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图
 
 输出编号的 1080×1440 PNG 文件和 `manifest.json`。会根据内容自动生成所需数量的正文页，并默认添加封面（设置 `cover: false` 可跳过）。使用 `--theme classic|finance|editorial|tech` 可预览或覆盖 front matter 中的主题。渲染器返回非零退出码时视为真实失败。修复输入或运行环境；不得谎称图片已生成。
 
-末页导流卡有两个版本，用 `--endcard` 切换，版本会记录在 `manifest.json` 的 `endcard` 字段：
+末页是独立的导流页（缩略图 + 品牌卡 + 免责声明，整页撑满布局，群二维码 200px）。品牌卡文案有两个版本，用 `--endcard` 切换，版本会记录在 `manifest.json` 的 `endcard` 字段：
 
 - `--endcard guided`（**默认**）：品牌卡内通栏一行截图指引"截图本页 → 微信扫一扫 → 从相册识别"。视频号图文里长按屏幕会触发加速播放，无法直接识别二维码，必须引导用户截图后到微信扫一扫从相册识别。
-- `--endcard legacy`：2026年8月前的旧版，二维码下方小字"扫码加入研报交流"，用于渲染历史版本做对照。
+- `--endcard legacy`：2026年8月前的旧版文案，二维码下方小字"扫码加入研报交流"，用于渲染历史版本做对照。
 
-新增导流版本时，在 `assets/endcard.js` 的 `__ENDCARD_COPY` 中增加变体文案，并在 `scripts/render.mjs` 的 `SUPPORTED_ENDCARD_VARIANTS` 中注册。页面构建脚本拆分为 `assets/cover.js`（封面）、`assets/runtime.js`（正文分页与编排）、`assets/endcard.js`（末页），由 `render.mjs` 按此顺序注入。
+新增导流版本时，在 `assets/endcard.js` 的 `__ENDCARD_COPY` 中增加变体文案，并在 `scripts/render.mjs` 的 `SUPPORTED_ENDCARD_VARIANTS` 中注册。页面构建脚本拆分为 `assets/cover.js`（封面）、`assets/runtime.js`（正文分页与编排）、`assets/endcard.js`（导流页），由 `render.mjs` 按此顺序注入。
 
 ### 8. 审计
 
