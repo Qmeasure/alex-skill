@@ -37,7 +37,7 @@ window.__carouselEndcard = (() => {
       const brand = element("div", copy.guide ? "brand-card brand-card-guided" : "brand-card");
       const info = element("div", "brand-card-info");
       info.appendChild(textElement("div", "brand-card-title", "完整研报加入智富界交流群"));
-      info.appendChild(textElement("div", "brand-card-intro", "智富界是一个聚焦AI产业、创业与投资的研究平台，帮助企业及用户看懂AI、用好AI、投资AI。"));
+      info.appendChild(textElement("div", "brand-card-intro", "智富界是一个聚焦AI产业、创业与投资的研究社群，帮助企业及用户看懂AI、用好AI、投资AI。"));
       brand.appendChild(info);
       const qr = element("div", "brand-card-qr");
       const img = element("img", "brand-card-qr-image");
