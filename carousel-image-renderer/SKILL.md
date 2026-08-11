@@ -17,6 +17,14 @@ npx skills add zzzdajb/inkstone
 
 不允许跳过Inkstone依赖。
 
+本技能同时强依赖 **qu-ai-wei** 对改写后的简体中文做去 AI 味处理（步骤 4）。步骤 1 检查依赖时会确认 qu-ai-wei 是否已安装；若未安装，立刻停止执行，并提示用户在终端手动运行：
+
+```
+npx skills add https://github.com/LifelongLazyLearner/qu-ai-wei
+```
+
+不允许跳过 qu-ai-wei 依赖。
+
 ## 编码
 
 所有输入和输出文件使用 UTF-8 编码。在 Windows 环境下运行脚本时，确保终端编码为 UTF-8（`chcp 65001`），否则中文内容可能出现乱码。
@@ -30,7 +38,7 @@ npx skills add zzzdajb/inkstone
 - 如果用户已经提供了信源，确认收到并记录格式和路径。
 - 如果用户没有明确提供信源，**必须主动询问**，严禁跳过，严禁自作主张。
 
-确认当前环境已安装 Inkstone 技能（用于步骤 3 提取源文档）后使用Inkstone SKILL提取信源并获得结构化数据。
+确认当前环境已安装 Inkstone 技能（用于步骤 3 提取源文档）和 qu-ai-wei 技能（用于步骤 4 去 AI 味）后，使用Inkstone SKILL提取信源并获得结构化数据。
 
 后续所有内容以信源为准。除了叙事风格指南允许的联网搜索故事素材以外，不得引入信源之外的事实、数据或观点。
 
@@ -70,6 +78,8 @@ python "<skill-dir>/scripts/preflight.py"
 - **英文/翻译件信源**的改写必须额外遵守叙事风格指南中的"英文术语处理"、"翻译腔反模式"和"读者知识假设"章节。写完后逐句自查是否存在英文语序、被动句式、多层定语嵌套等翻译腔痕迹。
 
 编写一份 UTF-8 Markdown 输入文件，使用 [references/content-format.md](references/content-format.md) 定义的 front matter、块级指令和行内标记。不得编造事实、数据、引用或品牌信息。
+
+初稿完成后，调用 **qu-ai-wei** SKILL 对全文做去 AI 味处理（只输出终稿），清理套话、机械结构和过度工整的表达；qu-ai-wei 保留事实和语气，处理后不得再引入新的 AI 句式。
 
 #### 手机阅读适配
 
