@@ -11,8 +11,8 @@ const PAGE_WIDTH = 1080;
 const PAGE_HEIGHT = 1440;
 // 正文页填充率红线（面积法：各块实际高度之和 ÷ flow 高度）：
 // 低于 FILL_ERROR_THRESHOLD 渲染失败，低于 FILL_WARNING_THRESHOLD 打警告（可能是不可拆块进位，需自查）。
-const FILL_ERROR_THRESHOLD = 0.55;
-const FILL_WARNING_THRESHOLD = 0.68;
+const FILL_ERROR_THRESHOLD = 0.65;
+const FILL_WARNING_THRESHOLD = 0.8;
 const SUPPORTED_THEMES = new Set(["classic", "finance", "editorial", "tech"]);
 const SUPPORTED_ENDCARD_VARIANTS = new Set(["guided", "legacy"]);
 
