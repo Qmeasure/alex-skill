@@ -11,3 +11,4 @@ AGENTS.md
 .venv/
 .python-version
 node_modules/
+.scratch/
