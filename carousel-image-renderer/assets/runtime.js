@@ -33,23 +33,6 @@
     return footer;
   }
 
-  function createCover() {
-    const page = element("section", "page-card cover-page");
-    page.dataset.kind = "cover";
-    page.appendChild(textElement("div", "cover-kicker", data.meta.kicker));
-    const main = element("div", "cover-main");
-    main.appendChild(element("h1", "cover-title", data.meta.titleHtml));
-    if (data.meta.subtitleHtml) main.appendChild(element("p", "cover-subtitle", data.meta.subtitleHtml));
-    page.appendChild(main);
-    const bottom = element("div", "cover-bottom");
-    bottom.appendChild(createBrand());
-    bottom.appendChild(textElement("span", "cover-tagline", BRAND_TAGLINE));
-    bottom.appendChild(textElement("span", "page-number", ""));
-    page.appendChild(bottom);
-    root.appendChild(page);
-    pageRecords.push({ page, flow: null });
-  }
-
   function createBodyPage() {
     const page = element("section", "page-card body-page");
     page.dataset.kind = "body";
@@ -61,6 +44,9 @@
     pageRecords.push(record);
     return record;
   }
+
+  // 供封面（cover.js）与末页（endcard.js）脚本使用的共享上下文。
+  const ctx = { data, root, pageRecords, element, textElement, createBrand, BRAND_TAGLINE };
 
   function renderList(block, nested = false) {
     const list = element(block.ordered ? "ol" : "ul", nested ? "nested-list" : "content-block list-block");
@@ -211,7 +197,7 @@
   }
 
   let thumbnailsBlock = null;
-  if (data.meta.cover) createCover();
+  if (data.meta.cover) window.__carouselCover(ctx);
   let current = createBodyPage();
 
   if (data.meta.wordCount) {
@@ -243,49 +229,7 @@
     if (pageNumber) pageNumber.textContent = String(index + 1).padStart(2, "0");
   });
 
-  const lastBody = [...pageRecords].reverse().find((record) => record.flow);
-  if (lastBody) {
-    const endBlock = element("div", "end-block");
-
-    if (thumbnailsBlock) {
-      const thumbSection = element("div", "thumbnails-block");
-      const thumbHeading = data.meta.source_pages ? `完整内容预览 共${data.meta.source_pages}页` : "完整内容预览";
-      thumbSection.appendChild(textElement("div", "thumbnails-heading", thumbHeading));
-      const grid = element("div", "thumbnails-grid");
-      thumbnailsBlock.images.forEach((img) => {
-        const thumb = element("div", "thumbnail-item");
-        const image = element("img", "thumbnail-image");
-        image.src = img.src;
-        image.alt = img.alt || "";
-        thumb.appendChild(image);
-        grid.appendChild(thumb);
-      });
-      thumbSection.appendChild(grid);
-      endBlock.appendChild(thumbSection);
-    }
-
-    if (data.meta.brandQr) {
-      const brand = element("div", "brand-card");
-      const info = element("div", "brand-card-info");
-      info.appendChild(textElement("div", "brand-card-title", "完整研报加入智富界交流群"));
-      info.appendChild(textElement("div", "brand-card-intro", "智富界是一个聚焦AI产业、创业与投资的研究平台，帮助企业及用户看懂AI、用好AI、投资AI。"));
-      brand.appendChild(info);
-      const qr = element("div", "brand-card-qr");
-      const img = element("img", "brand-card-qr-image");
-      img.src = data.meta.brandQr;
-      img.alt = "扫码加入研报交流";
-      qr.appendChild(img);
-      qr.appendChild(textElement("div", "brand-card-qr-label", "扫码加入研报交流"));
-      brand.appendChild(qr);
-      endBlock.appendChild(brand);
-    }
-
-    const disclaimer = element("div", "disclaimer");
-    disclaimer.textContent = "本文由AI结合公开资料整理生成，不代表投资建议";
-    endBlock.appendChild(disclaimer);
-
-    lastBody.flow.appendChild(endBlock);
-  }
+  window.__carouselEndcard.appendEndBlock(ctx, thumbnailsBlock);
 
   window.__renderReport = {
     pageCount: pageRecords.length,

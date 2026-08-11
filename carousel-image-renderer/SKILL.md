@@ -153,6 +153,13 @@ node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图
 
 输出编号的 1080×1440 PNG 文件和 `manifest.json`。会根据内容自动生成所需数量的正文页，并默认添加封面（设置 `cover: false` 可跳过）。使用 `--theme classic|finance|editorial|tech` 可预览或覆盖 front matter 中的主题。渲染器返回非零退出码时视为真实失败。修复输入或运行环境；不得谎称图片已生成。
 
+末页导流卡有两个版本，用 `--endcard` 切换，版本会记录在 `manifest.json` 的 `endcard` 字段：
+
+- `--endcard guided`（**默认**）：品牌卡内通栏一行截图指引"截图本页 → 微信扫一扫 → 从相册识别"。视频号图文里长按屏幕会触发加速播放，无法直接识别二维码，必须引导用户截图后到微信扫一扫从相册识别。
+- `--endcard legacy`：2026年8月前的旧版，二维码下方小字"扫码加入研报交流"，用于渲染历史版本做对照。
+
+新增导流版本时，在 `assets/endcard.js` 的 `__ENDCARD_COPY` 中增加变体文案，并在 `scripts/render.mjs` 的 `SUPPORTED_ENDCARD_VARIANTS` 中注册。页面构建脚本拆分为 `assets/cover.js`（封面）、`assets/runtime.js`（正文分页与编排）、`assets/endcard.js`（末页），由 `render.mjs` 按此顺序注入。
+
 ### 8. 审计
 
 启动一个独立的 sub-agent 对最终 Markdown 和渲染后的 PNG 做叙事风格基线审计。

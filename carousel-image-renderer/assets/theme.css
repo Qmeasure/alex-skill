@@ -757,6 +757,19 @@ del {
   white-space: nowrap;
 }
 
+.brand-card-guided {
+  flex-wrap: wrap;
+  row-gap: 14px;
+}
+
+.brand-card-guide {
+  flex-basis: 100%;
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
 .thumbnails-block {
   margin: 0 0 16px;
 }

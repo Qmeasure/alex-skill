@@ -10,6 +10,7 @@ const SKILL_DIR = path.resolve(SCRIPT_DIR, "..");
 const PAGE_WIDTH = 1080;
 const PAGE_HEIGHT = 1440;
 const SUPPORTED_THEMES = new Set(["classic", "finance", "editorial", "tech"]);
+const SUPPORTED_ENDCARD_VARIANTS = new Set(["guided", "legacy"]);
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (character) => ({
@@ -610,7 +611,7 @@ async function embedLocalMarkdownImages(source, inputPath) {
 }
 
 function parseArguments(argv) {
-  const options = { input: "", output: "", theme: "" };
+  const options = { input: "", output: "", theme: "", endcard: "" };
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index];
     if (value === "--output" || value === "-o") {
@@ -618,6 +619,9 @@ function parseArguments(argv) {
       index += 1;
     } else if (value === "--theme") {
       options.theme = argv[index + 1] || "";
+      index += 1;
+    } else if (value === "--endcard") {
+      options.endcard = argv[index + 1] || "";
       index += 1;
     } else if (value === "--help" || value === "-h") {
       options.help = true;
@@ -685,8 +689,9 @@ async function browserLaunchOptions() {
   return { headless: true };
 }
 
-function buildHtml(document, css, runtime) {
+function buildHtml(document, css, runtimeScripts) {
   const payload = JSON.stringify(document).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
+  const scriptTags = runtimeScripts.map((source) => `<script>${source}</script>`).join("\n");
   return `<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -697,12 +702,16 @@ function buildHtml(document, css, runtime) {
 <body>
   <main class="carousel" id="carousel"></main>
   <script>window.__CAROUSEL_DATA__ = ${payload};</script>
-  <script>${runtime}</script>
+  ${scriptTags}
 </body>
 </html>`;
 }
 
-async function render(inputPath, outputDirectory, themeOverride = "") {
+async function render(inputPath, outputDirectory, themeOverride = "", endcardVariant = "") {
+  const endcard = String(endcardVariant || "guided").trim().toLowerCase();
+  if (!SUPPORTED_ENDCARD_VARIANTS.has(endcard)) {
+    throw new Error(`Unsupported endcard variant "${endcardVariant}". Use guided or legacy.`);
+  }
   const rawSource = await fs.readFile(inputPath, "utf8");
   const source = await embedLocalMarkdownImages(rawSource, inputPath);
   const document = parseDocument(source);
@@ -711,13 +720,16 @@ async function render(inputPath, outputDirectory, themeOverride = "") {
   if (validation.errors.length) throw new Error(validation.errors.join("\n"));
   validation.warnings.forEach((warning) => process.stderr.write(`Warning: ${warning}\n`));
 
-  const [css, runtime, playwright, qrBytes] = await Promise.all([
+  const [css, coverScript, endcardScript, runtimeScript, playwright, qrBytes] = await Promise.all([
     fs.readFile(path.join(SKILL_DIR, "assets/theme.css"), "utf8"),
+    fs.readFile(path.join(SKILL_DIR, "assets/cover.js"), "utf8"),
+    fs.readFile(path.join(SKILL_DIR, "assets/endcard.js"), "utf8"),
     fs.readFile(path.join(SKILL_DIR, "assets/runtime.js"), "utf8"),
     loadPlaywright(),
     fs.readFile(path.join(SKILL_DIR, "assets/zhifujie-qr.png"))
   ]);
   document.meta.brandQr = `data:image/png;base64,${qrBytes.toString("base64")}`;
+  document.meta.endcard = endcard;
 
   await cleanOwnedOutputs(outputDirectory);
   const browser = await playwright.chromium.launch(await browserLaunchOptions());
@@ -726,7 +738,7 @@ async function render(inputPath, outputDirectory, themeOverride = "") {
       viewport: { width: PAGE_WIDTH, height: PAGE_HEIGHT },
       deviceScaleFactor: 1
     });
-    await page.setContent(buildHtml(document, css, runtime), { waitUntil: "load" });
+    await page.setContent(buildHtml(document, css, [coverScript, endcardScript, runtimeScript]), { waitUntil: "load" });
     await page.waitForFunction(() => document.body.dataset.renderReady === "true");
     await page.waitForFunction(() => [...document.images].every((image) => image.complete), null, { timeout: 15000 });
     await page.evaluate(() => document.fonts?.ready);
@@ -768,6 +780,7 @@ async function render(inputPath, outputDirectory, themeOverride = "") {
     const manifest = {
       title: plainText(document.meta.title),
       theme: document.meta.theme,
+      endcard,
       pages: count,
       width: PAGE_WIDTH,
       height: PAGE_HEIGHT,
@@ -784,7 +797,7 @@ async function render(inputPath, outputDirectory, themeOverride = "") {
 async function main() {
   const options = parseArguments(process.argv.slice(2));
   if (options.help) {
-    process.stdout.write("Usage: node render.mjs <input.md> --output <output-dir> [--theme classic|finance|editorial|tech]\n");
+    process.stdout.write("Usage: node render.mjs <input.md> --output <output-dir> [--theme classic|finance|editorial|tech] [--endcard guided|legacy]\n");
     return;
   }
   if (!options.input || !options.output) {
@@ -792,7 +805,7 @@ async function main() {
   }
   const inputPath = path.resolve(options.input);
   const outputDirectory = path.resolve(options.output);
-  const manifest = await render(inputPath, outputDirectory, options.theme);
+  const manifest = await render(inputPath, outputDirectory, options.theme, options.endcard);
   process.stdout.write(`Rendered ${manifest.pages} page(s) to ${outputDirectory}\n`);
   manifest.files.forEach((file) => process.stdout.write(`${path.join(outputDirectory, file)}\n`));
 }
