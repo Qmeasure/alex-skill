@@ -15,19 +15,26 @@ description: Render Chinese articles, reports, explainers, case studies, and dat
 npx skills add zzzdajb/inkstone
 ```
 
-不允许跳过Inkstone依赖。
-
-本技能同时强依赖 **qu-ai-wei** 对改写后的简体中文做去 AI 味处理（步骤 4）。步骤 1 检查依赖时会确认 qu-ai-wei 是否已安装；若未安装，立刻停止执行，并提示用户在终端手动运行：
+本技能依赖 **qu-ai-wei** 对改写后的简体中文做去 AI 味处理（步骤 4）。步骤 1 检查依赖时会确认 qu-ai-wei 是否已安装；若未安装，立刻停止执行，并提示用户在终端手动运行：
 
 ```
 npx skills add https://github.com/LifelongLazyLearner/qu-ai-wei
 ```
 
-不允许跳过 qu-ai-wei 依赖。
+不允许跳过任何依赖。
 
 ## 编码
 
 所有输入和输出文件使用 UTF-8 编码。在 Windows 环境下运行脚本时，确保终端编码为 UTF-8（`chcp 65001`），否则中文内容可能出现乱码。
+
+## 运行模式
+
+本技能有两种运行模式：
+
+- **HITL（默认）**：在关键节点让人做选择和判断，提高产出质量。包含两个固定检查点：角度确认（步骤 4）和封面三选一（步骤 7）。
+- **yolo**：用户请求中显式出现 "yolo"、"全自动" 等关键词时启用。yolo 模式跳过所有检查点，全自动产出。
+
+HITL 模式的提问哲学：多让人做选择或判断，但不强求。除两个固定检查点外，鼓励在遇到"能改善产出质量但自己把握不准"的问题时主动询问（例如填充率警告是否可接受、叙事断点是否自然），但不为问而问。用户显式拒绝回答某个问题时，按推荐项继续，不阻塞流程。yolo 模式下上述主动询问一律关闭。
 
 ## 工作流程
 
@@ -65,6 +72,15 @@ python "<skill-dir>/scripts/preflight.py"
 任何时候都**必须**阅读 [references/narrative-style.md](references/narrative-style.md)——它规定了所有轮播图的写作语气、数字密度、钩子结构和组件用法。
 
 ### 4. 改写与编写 Markdown
+
+#### 角度确认（HITL 检查点 1，yolo 模式跳过）
+
+改写开始前，根据素材分析产出 **3 个不同方向的角度方案**，每个方案包含：
+
+- 拟封面三层文字（`kicker` / `title` / `subtitle`，遵循下方封面规则）；
+- 一句话卖点——这个角度打算用什么钩子抓住读者。
+
+把 3 个方案交给用户选择，用户选定一个方向后再开始改写。用户也可以自由提出新方向，以用户输入为准。yolo 模式下跳过本检查点，由 agent 直接选择最佳方案。
 
 #### 改写
 
@@ -155,6 +171,14 @@ python "<skill-dir>/scripts/lint.py" <input.md>
 脚本检测：正文"你"字、kicker 主观词（解读/深度分析/研判/点评）、僵硬中文编号结构、每 section 数字密度、正文 H1 标题、风险内容是否在 `:::risk` 内。脚本只报告发现，不做决策。根据报告修改 Markdown，修改后重新运行第5步和本步骤，直到满意为止。
 
 ### 7. 渲染
+
+**封面三选一（HITL 检查点 2，yolo 模式跳过）**：正式渲染前，把检查点 1 的 3 个封面方案各渲染成一张封面图，让用户看着实际排版效果终选——文字阶段选定的方向在图上未必最好，用户可以反悔。做法：复制最终 Markdown 为 3 份临时文件，仅替换 front matter 的 `kicker` / `title` / `subtitle`，分别用 `--cover-only` 渲染到 3 个临时目录：
+
+```bash
+node "<skill-dir>/scripts/render.mjs" <variant.md> --output "<workspace>/视频图/cover-preview-N" --cover-only
+```
+
+`--cover-only` 只输出 `01-cover.png`，跳过正文页的溢出与填充率检查。用户选定方案后，把选定的封面文字写回最终 Markdown 的 front matter，删除临时文件和预览目录，再执行正式渲染。yolo 模式下跳过本检查点，直接使用 agent 推荐的封面。
 
 所有产物统一输出到工作区下的 `视频图/` 目录。目录不存在时自动创建。
 

@@ -627,6 +627,8 @@ function parseArguments(argv) {
     } else if (value === "--endcard") {
       options.endcard = argv[index + 1] || "";
       index += 1;
+    } else if (value === "--cover-only") {
+      options.coverOnly = true;
     } else if (value === "--help" || value === "-h") {
       options.help = true;
     } else if (value.startsWith("-")) {
@@ -711,7 +713,7 @@ function buildHtml(document, css, runtimeScripts) {
 </html>`;
 }
 
-async function render(inputPath, outputDirectory, themeOverride = "", endcardVariant = "") {
+async function render(inputPath, outputDirectory, themeOverride = "", endcardVariant = "", coverOnly = false) {
   const endcard = String(endcardVariant || "guided").trim().toLowerCase();
   if (!SUPPORTED_ENDCARD_VARIANTS.has(endcard)) {
     throw new Error(`Unsupported endcard variant "${endcardVariant}". Use guided or legacy.`);
@@ -720,6 +722,7 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
   const source = await embedLocalMarkdownImages(rawSource, inputPath);
   const document = parseDocument(source);
   if (themeOverride) document.meta.theme = String(themeOverride).trim().toLowerCase();
+  if (coverOnly && !document.meta.cover) throw new Error("--cover-only requires a cover (front matter `cover: false` is set).");
   const validation = validateDocument(document);
   if (validation.errors.length) throw new Error(validation.errors.join("\n"));
   validation.warnings.forEach((warning) => process.stderr.write(`Warning: ${warning}\n`));
@@ -753,7 +756,7 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
     if (brokenImages.length) throw new Error(`Markdown image failed to load: ${brokenImages.join(", ")}`);
 
     const report = await page.evaluate(() => window.__renderReport);
-    if (report.overflowPages.length) {
+    if (report.overflowPages.length && !coverOnly) {
       const debugCards = page.locator(".page-card");
       const cardCount = await debugCards.count();
       for (let index = 0; index < cardCount; index += 1) {
@@ -771,9 +774,9 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
       throw new Error(`Content overflow on rendered page(s): ${report.overflowPages.join(", ")}. Shorten the oversized block or insert a page break.`);
     }
 
-    // 正文页填充率检查（导流页与最后一页正文页由 runtime 标记豁免）。
+    // 正文页填充率检查（导流页与最后一页正文页由 runtime 标记豁免）。--cover-only 只出封面预览，跳过正文检查。
     const percent = (value) => `${Math.round(value * 100)}%`;
-    const sparsePages = (report.fillRatios || []).filter((entry) => !entry.last && entry.fill < FILL_WARNING_THRESHOLD);
+    const sparsePages = coverOnly ? [] : (report.fillRatios || []).filter((entry) => !entry.last && entry.fill < FILL_WARNING_THRESHOLD);
     sparsePages.filter((entry) => entry.fill >= FILL_ERROR_THRESHOLD).forEach((entry) => {
       const message = `Body page ${entry.page} is only ${percent(entry.fill)} full (warning threshold ${percent(FILL_WARNING_THRESHOLD)}). Check for unnecessary :::pagebreak or rebalance content.`;
       validation.warnings.push(message);
@@ -790,6 +793,7 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
     const files = [];
     for (let index = 0; index < count; index += 1) {
       const kind = await cards.nth(index).getAttribute("data-kind");
+      if (coverOnly && kind !== "cover") continue;
       const fileName = `${String(index + 1).padStart(2, "0")}-${kind === "cover" ? "cover" : "page"}.png`;
       await cards.nth(index).screenshot({ path: path.join(outputDirectory, fileName), type: "png" });
       files.push(fileName);
@@ -799,7 +803,8 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
       title: plainText(document.meta.title),
       theme: document.meta.theme,
       endcard,
-      pages: count,
+      coverOnly,
+      pages: files.length,
       width: PAGE_WIDTH,
       height: PAGE_HEIGHT,
       files,
@@ -816,7 +821,7 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
 async function main() {
   const options = parseArguments(process.argv.slice(2));
   if (options.help) {
-    process.stdout.write("Usage: node render.mjs <input.md> --output <output-dir> [--theme classic|finance|editorial|tech] [--endcard guided|legacy]\n");
+    process.stdout.write("Usage: node render.mjs <input.md> --output <output-dir> [--theme classic|finance|editorial|tech] [--endcard guided|legacy] [--cover-only]\n");
     return;
   }
   if (!options.input || !options.output) {
@@ -824,7 +829,7 @@ async function main() {
   }
   const inputPath = path.resolve(options.input);
   const outputDirectory = path.resolve(options.output);
-  const manifest = await render(inputPath, outputDirectory, options.theme, options.endcard);
+  const manifest = await render(inputPath, outputDirectory, options.theme, options.endcard, options.coverOnly);
   process.stdout.write(`Rendered ${manifest.pages} page(s) to ${outputDirectory}\n`);
   manifest.files.forEach((file) => process.stdout.write(`${path.join(outputDirectory, file)}\n`));
 }
