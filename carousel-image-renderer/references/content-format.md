@@ -200,6 +200,8 @@ All risk mentions — whether about past events or future possibilities — must
 :::
 ```
 
+来源署名由封面 `kicker` 统一承载。`:::source` 仅用于交代正文特有的数据口径或统计方法；禁止用它写"信源：XX 独家报道""数据均来自 XX"这类重复来源的废话——渲染文本中严禁出现"信源"二字。
+
 ### Thumbnails
 
 Use this to insert source material preview images at the end of the carousel. The renderer automatically creates a grid layout with a heading and call-to-action text. Just provide the images:

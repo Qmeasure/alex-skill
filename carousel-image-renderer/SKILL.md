@@ -169,7 +169,7 @@ node "<skill-dir>/scripts/validate.mjs" <input.md>
 python "<skill-dir>/scripts/lint.py" <input.md>
 ```
 
-脚本检测：正文"你"字、kicker 主观词（解读/深度分析/研判/点评）、僵硬中文编号结构、每 section 数字密度、正文 H1 标题、风险内容是否在 `:::risk` 内。脚本只报告发现，不做决策。根据报告修改 Markdown，修改后重新运行第5步和本步骤，直到满意为止。
+脚本检测：正文"你"字、kicker 主观词（解读/深度分析/研判/点评）、僵硬中文编号结构、每 section 数字密度、正文 H1 标题、风险内容是否在 `:::risk` 内、"信源"字样及冗余来源声明（来源署名只由封面 kicker 承载，`:::source` 不得重复）。脚本只报告发现，不做决策。根据报告修改 Markdown，修改后重新运行第5步和本步骤，直到满意为止。
 
 ### 7. 渲染
 

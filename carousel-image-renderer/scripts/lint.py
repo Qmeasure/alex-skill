@@ -105,6 +105,18 @@ def lint(filepath):
                     continue
                 findings.append(f'[COMPLIANCE] "{keyword}" outside :::risk: {directive_line[:80]}')
 
+    # --- Rule: the word "信源" is banned in rendered copy ---
+    for i, line in enumerate(body_no_code.split("\n"), start=1):
+        if "信源" in line:
+            findings.append(f'[BANNED] body contains forbidden word "信源" (line {i}): {line.strip()[:80]}')
+
+    # --- Rule: :::source must not be filler attribution (kicker already carries the source) ---
+    source_block_re = re.compile(r"^:::source\s*$\n(.*?)\n^:::$", re.MULTILINE | re.DOTALL)
+    for m in source_block_re.finditer(body):
+        content = " ".join(m.group(1).split())
+        if re.search(r"独家报道|信源|均来自|本文来自|整理自", content):
+            findings.append(f'[REDUNDANT] :::source is filler attribution; kicker already carries the source: {content[:80]}')
+
     # --- Rule: AI-style contrastive patterns ("不是A，而是B") ---
     ai_contrastive = re.compile(
         r"(?:不是|并非|不取决于|不在于|不会.*?而).*?(?:而是|而取决于|而在于|而会)"
