@@ -233,14 +233,23 @@
   });
 
   // 填充率只统计正文页：导流页（isEndcard）与内容自然结束的最后一页正文页豁免。
-  // 注意 flow 有 overflow:hidden，scrollHeight 不会小于 clientHeight，
-  // 必须用末个子元素底边相对 flow 顶边的距离来量内容实际占用高度。
-  function fillRatio(record) {
+  // 主度量 fill 为面积法：各子元素实际高度之和 ÷ flow 高度（块间距是排版节奏，不计入）。
+  // edge 为旧的末元素底边法，仅作对照参考，不用于判定。
+  function edgeRatio(record) {
     const flow = record.flow;
     const lastChild = flow.lastElementChild;
     if (!lastChild || !flow.clientHeight) return 1;
     const used = lastChild.getBoundingClientRect().bottom - flow.getBoundingClientRect().top;
     return used / flow.clientHeight;
+  }
+  function fillRatio(record) {
+    const flow = record.flow;
+    if (!flow.clientHeight || !flow.children.length) return 1;
+    let used = 0;
+    for (const child of flow.children) {
+      used += child.getBoundingClientRect().height;
+    }
+    return Math.min(1, used / flow.clientHeight);
   }
   const fillBodyRecords = pageRecords.filter((record) => record.flow && !record.isEndcard);
   window.__renderReport = {
@@ -248,7 +257,8 @@
     overflowPages: pageRecords.map((record, index) => record.flow && overflows(record) ? index + 1 : null).filter(Boolean),
     fillRatios: fillBodyRecords.map((record, index) => ({
       page: pageRecords.indexOf(record) + 1,
-      fill: fillRatio(record),
+      fill: Math.round(fillRatio(record) * 1000) / 1000,
+      edge: Math.round(edgeRatio(record) * 1000) / 1000,
       last: index === fillBodyRecords.length - 1
     }))
   };

@@ -219,7 +219,7 @@ Images are arranged in a centered row. Use 1–4 images (2 recommended); they do
 :::pagebreak
 ```
 
-Use this only between complete ideas. Automatic pagination is the default. The renderer enforces a fill ratio on every body page: below 60% the render fails, 60–75% emits a warning—abusing forced page breaks is the most common way to trip this check.
+Use this only between complete ideas. Automatic pagination is the default. The renderer enforces an area-based fill ratio on every body page (sum of block heights ÷ available height): below 55% the render fails, 55–68% emits a warning—abusing forced page breaks is the most common way to trip this check. Per-page measurements are written to `fillRatios` in `manifest.json` for review.
 
 ## Complete example
 
