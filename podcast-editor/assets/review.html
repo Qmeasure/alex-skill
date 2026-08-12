@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>剪播客</title>
+  <link rel="stylesheet" href="/assets/review.css">
+</head>
+<body>
+  <main class="app-shell" aria-busy="true">
+    <header class="topbar">
+      <div>
+        <p class="product-name">剪播客</p>
+        <h1 id="projectTitle">正在读取逐字稿</h1>
+      </div>
+      <div class="topbar-actions">
+        <div id="saveStatus" class="save-status" data-state="idle" role="status" aria-live="polite">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span id="saveStatusText">准备中</span>
+          <button id="retrySaveButton" class="text-button" type="button" hidden>重试</button>
+        </div>
+        <button id="previewButton" class="secondary-button" type="button" disabled>
+          <span aria-hidden="true">&#9654;</span>
+          生成精确试听
+        </button>
+        <button id="cancelButton" class="cancel-button" type="button" hidden>
+          取消
+        </button>
+        <button id="exportButton" class="primary-button" type="button" disabled>
+          导出到剪映
+        </button>
+      </div>
+    </header>
+
+    <section class="player-band" aria-label="播放控制">
+      <button id="playButton" class="icon-button play-button" type="button" title="播放" aria-label="播放" disabled>
+        <span aria-hidden="true">&#9654;</span>
+      </button>
+      <div class="now-playing">
+        <strong id="nowSpeaker">尚未播放</strong>
+        <div id="nowCaption" class="now-caption">载入后可从逐字稿定位播放</div>
+      </div>
+      <div class="timeline">
+        <span id="currentTime">00:00</span>
+        <input id="seekSlider" type="range" min="0" max="0" step="0.01" value="0" aria-label="播放进度" disabled>
+        <span id="durationTime">00:00</span>
+      </div>
+      <div id="liveDecks" class="media-decks" aria-hidden="true">
+        <div id="liveDeckA" data-deck-id="a" data-deck-state="idle">
+          <audio id="audioPlayer" data-deck-audio="a" preload="auto"></audio>
+        </div>
+        <div id="liveDeckB" data-deck-id="b" data-deck-state="idle">
+          <audio data-deck-audio="b" preload="auto"></audio>
+        </div>
+      </div>
+    </section>
+
+    <section class="controls-band" aria-label="逐字稿操作">
+      <div class="history-actions">
+        <button id="undoButton" class="icon-text-button" type="button" title="撤销上一步" disabled>
+          <span aria-hidden="true">&#8630;</span>
+          撤销
+        </button>
+        <button id="redoButton" class="icon-text-button" type="button" title="重做上一步" disabled>
+          <span aria-hidden="true">&#8631;</span>
+          重做
+        </button>
+      </div>
+      <div id="speakerFilters" class="speaker-filters" role="group" aria-label="按嘉宾筛选"></div>
+    </section>
+
+    <section class="speaker-band" aria-labelledby="speakerHeading">
+      <h2 id="speakerHeading">嘉宾名称</h2>
+      <div id="speakerEditors" class="speaker-editors"></div>
+    </section>
+
+    <section class="transcript-band" aria-labelledby="transcriptHeading">
+      <div class="transcript-heading">
+        <h2 id="transcriptHeading">逐字稿</h2>
+        <span id="selectionSummary">已划掉 0 字</span>
+      </div>
+      <div id="transcript" class="transcript" aria-live="polite">
+        <p class="empty-state">正在读取逐字稿</p>
+      </div>
+    </section>
+
+    <section id="waveformPanel" class="waveform-band" aria-labelledby="waveformHeading">
+      <div class="waveform-heading">
+        <div>
+          <h2 id="waveformHeading">切点波形</h2>
+          <span id="waveformRange">选择一段删除内容后可调整切点</span>
+        </div>
+        <div class="waveform-actions">
+          <label class="cut-selector-label" for="cutSelector">删除段</label>
+          <select id="cutSelector" class="cut-selector" disabled></select>
+          <button id="waveformZoomOut" class="waveform-button" type="button" title="缩小波形" aria-label="缩小波形" disabled>&minus;</button>
+          <button id="waveformZoomIn" class="waveform-button" type="button" title="放大波形" aria-label="放大波形" disabled>+</button>
+          <button id="waveformResetView" class="waveform-button" type="button" title="回到当前删除段" aria-label="回到当前删除段" disabled>&#8634;</button>
+          <button id="cutResetButton" class="secondary-button waveform-reset" type="button" disabled>恢复自动切点</button>
+        </div>
+      </div>
+      <div id="waveformViewport" class="waveform-viewport" tabindex="0" aria-label="音频波形，可拖动平移">
+        <canvas id="waveformCanvas" aria-hidden="true"></canvas>
+        <div id="waveformRawRange" class="waveform-range waveform-raw" aria-hidden="true"></div>
+        <div id="waveformActualRange" class="waveform-range waveform-actual" aria-hidden="true">
+          <button id="cutStartHandle" class="cut-handle cut-start" type="button" aria-label="调整删除起点"></button>
+          <button id="cutEndHandle" class="cut-handle cut-end" type="button" aria-label="调整删除终点"></button>
+        </div>
+      </div>
+      <div class="waveform-legend">
+        <span><i class="legend-raw" aria-hidden="true"></i>选中文字</span>
+        <span><i class="legend-actual" aria-hidden="true"></i>实际删除</span>
+        <span id="boundaryWarning" class="boundary-warning" role="status" hidden>切点需要人工复核</span>
+      </div>
+    </section>
+
+    <section id="exportResult" class="export-result" aria-live="polite" hidden>
+      <strong id="exportName"></strong>
+      <code id="exportPath"></code>
+    </section>
+  </main>
+  <script src="/assets/review.js" defer></script>
+</body>
+</html>
