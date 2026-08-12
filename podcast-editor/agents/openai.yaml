@@ -1,0 +1,4 @@
+interface:
+  display_name: "剪播客"
+  short_description: "转录并逐字审核播客口误，支持多人分轨并生成剪映音频草稿"
+  default_prompt: "请转录并剪辑这些播客音频，打开逐字审核页，确认后导出剪映草稿。"
