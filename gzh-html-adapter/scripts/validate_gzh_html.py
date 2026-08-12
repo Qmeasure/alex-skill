@@ -14,7 +14,6 @@ from pathlib import Path
 ALLOWED_TAGS = {
     "section",
     "p",
-    "h1",
     "h2",
     "h3",
     "h4",
@@ -86,7 +85,71 @@ FORBIDDEN_DOCUMENT_PATTERNS = (
 )
 
 HTTP_LINK = re.compile(r"^https?://", re.I)
-LIGHT_BACKGROUND_LUMINANCE = 0.72
+
+# 固定蓝白色板。详见 references/visual-system.md，改动必须同步那份文档。
+PALETTE = frozenset(
+    {
+        "#1b3a6b",  # 深蓝
+        "#2b6ef2",  # 主蓝
+        "#6fa0e8",  # 中蓝
+        "#f2f6fc",  # 浅蓝底
+        "#d8e2f0",  # 边框蓝
+        "#1a1a1a",  # 正文黑
+        "#666666",  # 次要灰
+        "#9a9a9a",  # 弱化灰
+        "#c0392b",  # 警示红
+        "#e0a458",  # 琥珀
+        "#ffffff",  # 白
+    }
+)
+DEEP_BLUE = "#1b3a6b"
+BODY_BLACK = "#1a1a1a"
+ALERT_RED = "#c0392b"
+ROOT_BACKGROUND_TOKENS = {"#ffffff", "#f2f6fc"}
+HEADING_COLOR_RULES = {"h2": DEEP_BLUE, "h3": DEEP_BLUE, "h4": BODY_BLACK}
+BACKGROUND_PROPERTIES = {"background", "background-color"}
+SHADOW_PROPERTIES = {"box-shadow", "text-shadow"}
+COLOR_PROPERTIES = {
+    "color",
+    "border",
+    "border-top",
+    "border-right",
+    "border-bottom",
+    "border-left",
+    "outline",
+} | BACKGROUND_PROPERTIES | SHADOW_PROPERTIES
+# 颜色属性里合法但不是颜色的取值。不在这里、也不是色板色值的写法一律报错，
+# 这样 papayawhip 之类没被枚举的颜色名不会静默通过。
+NON_COLOR_KEYWORDS = {
+    "inherit",
+    "currentcolor",
+    "initial",
+    "unset",
+    "revert",
+    "none",
+    "transparent",
+    "auto",
+    "solid",
+    "dashed",
+    "dotted",
+    "double",
+    "groove",
+    "ridge",
+    "inset",
+    "outset",
+    "hidden",
+    "thin",
+    "medium",
+    "thick",
+    "repeat",
+    "no-repeat",
+    "center",
+    "cover",
+    "contain",
+    "border-box",
+    "padding-box",
+    "content-box",
+}
 HEX_COLOR = re.compile(r"^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$", re.I)
 COLOR_FUNCTION = re.compile(r"^(rgba?|hsla?)\((.*)\)$", re.I)
 COLOR_TOKEN = re.compile(
@@ -136,33 +199,9 @@ GRADIENT_WORDS = {
     "vmin",
     "vw",
 }
+# 色板只用十六进制和 rgb()/hsl() 表达，颜色名一律不接受。这里只保留
+# transparent，供背景解析判断「没有实际底色」。
 NAMED_COLORS = {
-    "black": (0, 0, 0, 1),
-    "white": (255, 255, 255, 1),
-    "red": (255, 0, 0, 1),
-    "green": (0, 128, 0, 1),
-    "blue": (0, 0, 255, 1),
-    "gray": (128, 128, 128, 1),
-    "grey": (128, 128, 128, 1),
-    "silver": (192, 192, 192, 1),
-    "navy": (0, 0, 128, 1),
-    "teal": (0, 128, 128, 1),
-    "purple": (128, 0, 128, 1),
-    "maroon": (128, 0, 0, 1),
-    "olive": (128, 128, 0, 1),
-    "yellow": (255, 255, 0, 1),
-    "aqua": (0, 255, 255, 1),
-    "fuchsia": (255, 0, 255, 1),
-    "orange": (255, 165, 0, 1),
-    "whitesmoke": (245, 245, 245, 1),
-    "snow": (255, 250, 250, 1),
-    "ivory": (255, 255, 240, 1),
-    "seashell": (255, 245, 238, 1),
-    "linen": (250, 240, 230, 1),
-    "aliceblue": (240, 248, 255, 1),
-    "honeydew": (240, 255, 240, 1),
-    "mintcream": (245, 255, 250, 1),
-    "azure": (240, 255, 255, 1),
     "transparent": (255, 255, 255, 0),
 }
 
@@ -232,18 +271,6 @@ def _parse_color(value: str) -> tuple[float, float, float, float] | None:
     return None
 
 
-def _relative_luminance(color: tuple[float, float, float, float]) -> float:
-    red, green, blue, alpha = color
-    channels = [channel * alpha + (1 - alpha) for channel in (red, green, blue)]
-    linear = [
-        channel / 12.92
-        if channel <= 0.04045
-        else ((channel + 0.055) / 1.055) ** 2.4
-        for channel in channels
-    ]
-    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
-
-
 def _gradient_colors(value: str) -> list[tuple[float, float, float, float]] | None:
     if not GRADIENT_START.match(value.strip()) or not value.strip().endswith(")"):
         return None
@@ -264,6 +291,60 @@ def _gradient_colors(value: str) -> list[tuple[float, float, float, float]] | No
             return None
         colors.append(color)
     return colors or None
+
+
+def _hex_from_color(color: tuple[float, float, float, float]) -> str | None:
+    red, green, blue, alpha = color
+    if alpha == 0:
+        return "transparent"
+    if alpha != 1:
+        return None
+    return "#%02x%02x%02x" % (round(red * 255), round(green * 255), round(blue * 255))
+
+
+def _normalize_color(value: str) -> str | None:
+    """把颜色写法归一成 #rrggbb 或 transparent，半透明返回 None。"""
+    color = _parse_color(value)
+    if color is None:
+        return None
+    return _hex_from_color(color)
+
+
+def _bare_words(value: str) -> list[str]:
+    """取出一条声明里不属于颜色函数、长度和渐变方位的裸词。"""
+    residue = COLOR_TOKEN.sub(" ", value.lower())
+    return [
+        word
+        for word in re.findall(r"[a-z][a-z-]*", residue)
+        if word not in GRADIENT_WORDS
+    ]
+
+
+def _is_shadow_black(value: str) -> bool:
+    color = _parse_color(value)
+    if color is None:
+        return False
+    red, green, blue, _ = color
+    return red == green == blue == 0
+
+
+def _carries_color(property_name: str) -> bool:
+    return (
+        property_name in COLOR_PROPERTIES
+        or property_name.endswith("-color")
+        or property_name.startswith("background-")
+    )
+
+
+def _declarations(style: str) -> list[tuple[str, str]]:
+    parsed: list[tuple[str, str]] = []
+    for declaration in style.split(";"):
+        declaration = declaration.strip()
+        if not declaration or ":" not in declaration:
+            continue
+        property_name, value = (part.strip() for part in declaration.split(":", 1))
+        parsed.append((property_name.lower(), value))
+    return parsed
 
 
 def _root_background_error(style: str | None) -> str | None:
@@ -301,8 +382,9 @@ def _root_background_error(style: str | None) -> str | None:
 
     if not colors or all(color[3] == 0 for color in colors):
         return "根 <section> 的背景无法解析或不是明确颜色"
-    if any(_relative_luminance(color) < LIGHT_BACKGROUND_LUMINANCE for color in colors):
-        return "根 <section> 必须使用浅色背景，渐变中的所有色标也必须为浅色"
+    for color in colors:
+        if _hex_from_color(color) not in ROOT_BACKGROUND_TOKENS:
+            return "根 <section> 的背景只能使用 #FFFFFF 或 #F2F6FC，含二者构成的原生渐变"
     return None
 
 
@@ -345,7 +427,12 @@ class FragmentParser(HTMLParser):
         if not self.stack:
             self.root_tags.append(tag)
 
-        if tag in FORBIDDEN_TAGS:
+        if tag == "h1":
+            self.errors.append(
+                "正文不能包含 <h1>：文章标题在公众号后台的标题栏单独填写，"
+                "不写进正文。正文最高标题层级是 <h2>"
+            )
+        elif tag in FORBIDDEN_TAGS:
             self.errors.append(f"禁止标签：<{tag}>")
         elif tag not in ALLOWED_TAGS:
             self.errors.append(f"未允许的标签：<{tag}>")
@@ -387,14 +474,87 @@ class FragmentParser(HTMLParser):
             if pattern.search(style):
                 self.errors.append(f"<{tag}> 的 style 包含禁止项：{label}")
 
-        for declaration in style.split(";"):
-            declaration = declaration.strip()
-            if not declaration or ":" not in declaration:
-                continue
-            property_name, value = (part.strip() for part in declaration.split(":", 1))
-            if property_name.lower() == "font-family":
+        declarations = _declarations(style)
+        background_values: list[str] = []
+        text_color: str | None = None
+
+        for property_name, value in declarations:
+            if property_name == "font-family":
                 if value.strip().lower() != "inherit":
                     self.errors.append(f"<{tag}> 的 font-family 必须使用 inherit")
+            if property_name in BACKGROUND_PROPERTIES:
+                background_values.append(value)
+            if property_name == "color":
+                text_color = value
+            self._validate_palette(tag, property_name, value)
+
+        self._validate_color_roles(tag, background_values, text_color)
+
+    def _validate_palette(self, tag: str, property_name: str, value: str) -> None:
+        if not _carries_color(property_name):
+            return
+
+        is_shadow = property_name in SHADOW_PROPERTIES
+        for token in COLOR_TOKEN.findall(value):
+            if is_shadow and _is_shadow_black(token):
+                continue
+            normalized = _normalize_color(token)
+            if is_shadow and normalized is None:
+                # 阴影允许带透明度，只要底色在色板内。
+                color = _parse_color(token)
+                if color is not None:
+                    normalized = _hex_from_color((*color[:3], 1.0))
+            if normalized == "transparent":
+                continue
+            if normalized is None:
+                self.errors.append(
+                    f"<{tag}> 的 {property_name} 使用了无法解析或带透明度的颜色：{token}"
+                )
+            elif normalized not in PALETTE:
+                self.errors.append(
+                    f"<{tag}> 的 {property_name} 使用了色板外的颜色：{token}"
+                )
+
+        for word in _bare_words(value):
+            if word not in NON_COLOR_KEYWORDS:
+                self.errors.append(
+                    f"<{tag}> 的 {property_name} 使用了颜色名或无法识别的取值：{word}。"
+                    "颜色只能写成色板内的十六进制或 rgb()/hsl()"
+                )
+
+    def _validate_color_roles(
+        self,
+        tag: str,
+        background_values: list[str],
+        text_color: str | None,
+    ) -> None:
+        required = HEADING_COLOR_RULES.get(tag)
+        if required is not None:
+            declared = _normalize_color(text_color) if text_color else None
+            if declared != required:
+                self.errors.append(
+                    f"<{tag}> 的 color 必须是 {required.upper()}，当前为 "
+                    f"{text_color or '未声明'}"
+                )
+
+        opaque_backgrounds = [
+            normalized
+            for normalized in (
+                _normalize_color(candidate) for candidate in background_values
+            )
+            if normalized not in (None, "transparent")
+        ]
+        gradient_backgrounds = [
+            value for value in background_values if _gradient_colors(value) is not None
+        ]
+
+        if (opaque_backgrounds or gradient_backgrounds) and not text_color:
+            self.errors.append(
+                f"<{tag}> 声明了背景色却没有声明 color，深色模式下文字会失去对比"
+            )
+
+        if tag in {"th", "thead"} and ALERT_RED in opaque_backgrounds:
+            self.errors.append(f"<{tag}> 的表头背景不能使用警示红 {ALERT_RED.upper()}")
 
     def handle_endtag(self, tag: str) -> None:
         tag = tag.lower()
@@ -463,7 +623,7 @@ def main() -> int:
     result = validate_html(html)
     print(f"公众号正文校验：{args.file}")
     if result.ok:
-        print("通过：正文结构、浅色根背景、内联样式和无图片规则均符合要求。")
+        print("通过：正文结构、蓝白色板、标题用色、背景与文字配对和无图片规则均符合要求。")
         return 0
 
     print(f"发现 {len(result.errors)} 个问题：")

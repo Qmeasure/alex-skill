@@ -784,11 +784,18 @@ class ReviewBrowserTests(unittest.TestCase):
             self.page.wait_for_timeout(50)
         self.fail(f"等待第 {count} 次波形请求超时")
 
+    def enter_edit_mode(self):
+        button = self.page.locator("#interactionModeButton")
+        if button.get_attribute("aria-pressed") != "true":
+            button.click()
+        self.assertEqual(button.get_attribute("aria-pressed"), "true")
+
     def test_complete_review_flow(self):
         page = self.page
         self.assertEqual(page.locator(".utterance").count(), 2)
         self.assertEqual(page.locator(".word").count(), 3)
         self.assertEqual(page.locator(".punctuation").count(), 1)
+        self.enter_edit_mode()
 
         first_word = page.locator('[data-word-id="word-1"]')
         first_word.click()
@@ -861,6 +868,7 @@ class ReviewBrowserTests(unittest.TestCase):
                 '#previewButton',
                 '#exportButton',
                 '#playButton',
+                '#interactionModeButton',
                 '#undoButton',
                 '#redoButton',
                 '#waveformViewport',
@@ -891,9 +899,38 @@ class ReviewBrowserTests(unittest.TestCase):
             self.assertLessEqual(control["right"], measurements["viewportWidth"], control["selector"])
             self.assertLessEqual(control["scrollWidth"], control["clientWidth"], control["selector"])
 
+        self.page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+        toolbar_top = self.page.locator(".workspace-toolbar").evaluate(
+            "element => element.getBoundingClientRect().top"
+        )
+        self.assertAlmostEqual(toolbar_top, 0, delta=1)
+
+    def test_default_play_mode_clicks_word_without_editing(self):
+        page = self.page
+        self.assertEqual(page.locator("#interactionModeButton").get_attribute("aria-pressed"), "false")
+        self.assertEqual(page.locator("#interactionModeText").inner_text(), "播放模式")
+        page.locator('[data-word-id="word-2"]').click()
+        page.wait_for_function("document.querySelector('#playButton').ariaLabel === '暂停'")
+        self.assertEqual(ReviewMockHandler.saved_requests, [])
+        self.assertFalse(page.locator('[data-word-id="word-2"]').evaluate(
+            "element => element.classList.contains('is-selected')"
+        ))
+
+    def test_play_mode_click_on_deleted_word_starts_at_next_kept_audio(self):
+        ReviewMockHandler.selected_word_ids = {"word-2"}
+        self.page.reload()
+        self.page.locator('[data-word-id="word-2"]').click()
+        self.page.wait_for_function("document.querySelector('#playButton').ariaLabel === '暂停'")
+        self.assertGreaterEqual(
+            self.page.locator("#audioPlayer").evaluate("audio => audio.currentTime"),
+            0.49,
+        )
+        self.assertEqual(ReviewMockHandler.saved_requests, [])
+
     def test_preview_caption_uses_remapped_timeline_and_edit_returns_to_live_cut(self):
         page = self.page
         original_word_count = page.locator(".word").count()
+        self.enter_edit_mode()
 
         page.locator('[data-word-id="word-1"]').click()
         self.wait_for_save_count(1)
@@ -935,6 +972,7 @@ class ReviewBrowserTests(unittest.TestCase):
 
     def test_live_playback_skips_a_word_deleted_while_playing(self):
         page = self.page
+        self.enter_edit_mode()
         page.locator("#audioPlayer").evaluate(
             "audio => { audio.currentTime = 0.25; audio.dispatchEvent(new Event('timeupdate')); }"
         )
@@ -976,6 +1014,7 @@ class ReviewBrowserTests(unittest.TestCase):
 
     def test_edit_mutes_until_current_cut_plan_arrives_and_restores_logical_time(self):
         page = self.page
+        self.enter_edit_mode()
         initial_plan_id = page.locator("#audioPlayer").get_attribute("data-plan-id")
         gate = threading.Event()
         ReviewMockHandler.save_gate = gate
@@ -1084,6 +1123,7 @@ class ReviewBrowserTests(unittest.TestCase):
         }
         self.page.reload()
         self.page.locator("#cutResetButton").wait_for(state="visible")
+        self.enter_edit_mode()
 
         self.page.locator('[data-word-id="word-1"]').click()
         self.wait_for_save_count(1)
@@ -1382,6 +1422,7 @@ class ReviewBrowserTests(unittest.TestCase):
         self.page.wait_for_function(
             "document.querySelector('[data-deck-id=\"a\"]').dataset.deckState === 'starting'"
         )
+        self.enter_edit_mode()
         self.page.locator('[data-word-id="word-2"]').click()
         self.wait_for_save_count(1)
         self.page.wait_for_function(

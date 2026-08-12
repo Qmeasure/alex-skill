@@ -51,7 +51,7 @@ from podcast_editor.volcengine import (  # noqa: E402
     VolcengineASR,
     build_request,
 )
-from podcast_editor.workflow import prepare_project  # noqa: E402
+from podcast_editor.workflow import prepare_project, retranscribe_project  # noqa: E402
 
 
 def asr_result(words, speaker="0"):
@@ -244,6 +244,100 @@ class BackendTests(unittest.TestCase):
         self.assertEqual(project["mode"], "mixed")
         self.assertEqual(transcriber.calls[0][1], True)
         self.assertIsNone(project["sources"][0]["speakerId"])
+
+    def test_retranscribe_replaces_state_and_preserves_every_speaker_cluster(self):
+        result = {
+            "result": {
+                "utterances": [
+                    {
+                        "speaker_id": speaker,
+                        "text": text,
+                        "words": [{"text": text, "start_time": index * 200, "end_time": index * 200 + 100}],
+                    }
+                    for index, (speaker, text) in enumerate(
+                        (("voice-a", "嗯"), ("voice-b", "你"), ("voice-c", "好"), ("voice-a", "啊"))
+                    )
+                ]
+            }
+        }
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder) / "project"
+            audio = Path(folder) / "mix.mp3"
+            audio.write_bytes(b"audio")
+            prepare_project(
+                [audio],
+                root,
+                transcriber=FakeTranscriber([asr_result([("旧", 0, 100)], speaker="old")]),
+                probes=[AudioProbe(1000, 1.0, "mp3", 1000)],
+            )
+            old_project = ProjectStore(root).load_project()
+            old_word_ids = {
+                word["id"] for utterance in old_project["utterances"] for word in utterance["words"]
+            }
+            (root / "selection-seed.json").write_text("{}", encoding="utf-8")
+            (root / "selection-notes.json").write_text("{}", encoding="utf-8")
+            (root / "cache").mkdir(exist_ok=True)
+            (root / "cache" / "preview-old.wav").write_bytes(b"preview")
+            analysis = root / "cache" / "audio-analysis" / "source.bin"
+            analysis.parent.mkdir(parents=True)
+            analysis.write_bytes(b"analysis")
+            draft = root / "剪映草稿" / "keep.txt"
+            draft.parent.mkdir()
+            draft.write_text("draft", encoding="utf-8")
+
+            store = retranscribe_project(
+                root,
+                transcriber=FakeTranscriber([result]),
+                probes=[AudioProbe(1000, 1.0, "mp3", 1000)],
+            )
+            project = store.load_project()
+            state = store.load_state(project)
+
+            self.assertEqual([speaker["name"] for speaker in project["speakers"]], ["嘉宾一", "嘉宾二", "嘉宾三"])
+            self.assertEqual(
+                [utterance["speakerId"] for utterance in project["utterances"]],
+                ["speaker-01", "speaker-02", "speaker-03", "speaker-01"],
+            )
+            self.assertEqual(len(state["selectedWordIds"]), 2)
+            self.assertTrue(all(word_id.startswith("word-rt-") for word_id in state["selectedWordIds"]))
+            self.assertTrue(all(utterance["id"].startswith("utterance-rt-") for utterance in project["utterances"]))
+            new_word_ids = {
+                word["id"] for utterance in project["utterances"] for word in utterance["words"]
+            }
+            self.assertTrue(old_word_ids.isdisjoint(new_word_ids))
+            self.assertEqual(state["speakerOverrides"], {})
+            self.assertEqual(state["cutOverrides"], {})
+            self.assertFalse((root / "selection-seed.json").exists())
+            self.assertFalse((root / "selection-notes.json").exists())
+            self.assertFalse((root / "cache" / "preview-old.wav").exists())
+            self.assertEqual((root / "cache" / "audio-analysis" / "source.bin").read_bytes(), b"analysis")
+            self.assertEqual((root / "剪映草稿" / "keep.txt").read_text(encoding="utf-8"), "draft")
+
+    def test_failed_retranscription_leaves_existing_project_unchanged(self):
+        class FailedTranscriber:
+            def transcribe(self, audio_path, *, identify_speakers):
+                raise PodcastEditorError("asr_failed", "识别失败")
+
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder) / "project"
+            audio = Path(folder) / "mix.mp3"
+            audio.write_bytes(b"audio")
+            store = prepare_project(
+                [audio],
+                root,
+                transcriber=FakeTranscriber([asr_result([("旧", 0, 100)], speaker="old")]),
+                probes=[AudioProbe(1000, 1.0, "mp3", 1000)],
+            )
+            before_project = store.project_path.read_bytes()
+            before_state = store.state_path.read_bytes()
+            with self.assertRaises(PodcastEditorError):
+                retranscribe_project(
+                    root,
+                    transcriber=FailedTranscriber(),
+                    probes=[AudioProbe(1000, 1.0, "mp3", 1000)],
+                )
+            self.assertEqual(store.project_path.read_bytes(), before_project)
+            self.assertEqual(store.state_path.read_bytes(), before_state)
 
     def test_mixed_mode_requires_diarization_label(self):
         result = {"result": {"utterances": [{"words": [{"text": "你", "start_time": 0, "end_time": 100}]}]}}

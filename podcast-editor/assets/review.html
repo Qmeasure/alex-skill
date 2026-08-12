@@ -8,6 +8,7 @@
 </head>
 <body>
   <main class="app-shell" aria-busy="true">
+    <div class="workspace-toolbar">
     <header class="topbar">
       <div>
         <p class="product-name">剪播客</p>
@@ -56,6 +57,10 @@
     </section>
 
     <section class="controls-band" aria-label="逐字稿操作">
+      <button id="interactionModeButton" class="mode-button" type="button" aria-pressed="false" title="当前为播放模式">
+        <span class="mode-icon" aria-hidden="true">&#9654;</span>
+        <span id="interactionModeText">播放模式</span>
+      </button>
       <div class="history-actions">
         <button id="undoButton" class="icon-text-button" type="button" title="撤销上一步" disabled>
           <span aria-hidden="true">&#8630;</span>
@@ -68,6 +73,7 @@
       </div>
       <div id="speakerFilters" class="speaker-filters" role="group" aria-label="按嘉宾筛选"></div>
     </section>
+    </div>
 
     <section class="speaker-band" aria-labelledby="speakerHeading">
       <h2 id="speakerHeading">嘉宾名称</h2>

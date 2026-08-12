@@ -5,19 +5,19 @@
 正文是一个纯 HTML 片段：
 
 ```html
-<section style="max-width:100%;box-sizing:border-box;background:#f7f7f5;color:#222222;font-family:inherit;">
+<section style="max-width:100%;box-sizing:border-box;background:#FFFFFF;color:#1A1A1A;font-family:inherit;">
   ...
 </section>
 ```
 
 正文只能有一个根 `<section>`，不能包含 `DOCTYPE`、`html`、`head`、`body`。
-根元素必须通过 `background` 或 `background-color` 声明可解析的浅色背景。纯色和渐变色标都要保持明亮；不能用透明、继承值或无法判断亮度的写法代替明确背景。示例中的颜色只用于说明格式，不是固定配色。
+根元素必须通过 `background` 或 `background-color` 声明背景，取值只能是 `#FFFFFF`，或仅由 `#FFFFFF` 与 `#F2F6FC` 构成的原生 CSS 渐变；不能用透明、继承值或无法判断亮度的写法代替。
 
 ## 标签和属性
 
 正文可使用：
 
-- 结构：`section`、`p`、`h1`、`h2`、`h3`、`h4`、`blockquote`；
+- 结构：`section`、`p`、`h2`、`h3`、`h4`、`blockquote`；
 - 列表：`ul`、`ol`、`li`；
 - 表格：`table`、`thead`、`tbody`、`tr`、`th`、`td`；
 - 行内：`span`、`strong`、`em`、`a`、`br`、`hr`。
@@ -32,6 +32,7 @@
 
 禁止：
 
+- `h1`。文章标题在公众号后台的标题栏填写，正文最高标题层级是 `h2`；
 - `img`、`picture`、`source`、SVG、Canvas；
 - `video`、`audio`、`iframe`、`object`、`embed`；
 - `style`、`script`、`link`；
@@ -40,18 +41,13 @@
 
 ## 内联 CSS
 
-样式既要保证粘贴稳定，也要体现本篇文章的设计方向。字体从公众号编辑器继承；颜色、边框、留白和阴影按文章内容选择，并在全文保持一致。
+样式要保证粘贴稳定。字体从公众号编辑器继承；颜色、字号、间距和边框照抄
+[visual-system.md](visual-system.md) 的片段表，不在这里另行拟定。
 
-常用结构规则：
+该文档同时规定两条与粘贴稳定性相关的硬规则：
 
-```text
-根容器：max-width:100%;box-sizing:border-box;background:<明确的浅色背景>;font-family:inherit
-正文：margin:0 0 1em;line-height:1.75;word-break:break-word
-标题：margin:1.4em 0 .7em;line-height:1.4;font-weight:700
-表格：width:100%;border-collapse:collapse;table-layout:fixed
-单元格：padding:.5em;border:1px solid <本篇边框色>;vertical-align:top
-链接：text-decoration:underline;word-break:break-all
-```
+- 任何声明 `background` 或 `background-color` 的元素必须同时声明 `color`；
+- 颜色不带透明度，只有 `box-shadow` 和 `text-shadow` 可以用半透明黑。
 
 图表可以使用：
 
@@ -59,11 +55,11 @@
 - `display:block`、`inline-block`、`table`、`table-cell`；
 - `vertical-align`、`text-align`；
 - `border`、`border-width`、`border-style`、`border-color`；
-- 与本篇设计方向一致的颜色、浅色渐变和透明度；
+- 色板内的颜色，用法见 [visual-system.md](visual-system.md)；
 - 克制的 `box-shadow` 或 `text-shadow`；
 - `overflow`、`word-break`、`box-sizing`。
 
-根背景可以使用纯色，也可以使用 `background:linear-gradient(...)`、`radial-gradient(...)` 等无需外部资源的原生 CSS 表现。所有色标都要是可解析的浅色。内部标题和强调块可以使用深色背景，校验器只检查根背景的整体明度。
+根背景可以是纯色 `#FFFFFF`，也可以是仅由 `#FFFFFF` 与 `#F2F6FC` 构成的 `linear-gradient(...)`、`radial-gradient(...)` 等原生 CSS 渐变。表头、图表条形等局部可以使用深蓝底加白字，校验器只对根背景做取值限制。
 
 不得使用：
 

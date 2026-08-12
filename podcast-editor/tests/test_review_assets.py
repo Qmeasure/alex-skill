@@ -103,6 +103,8 @@ class ReviewAssetTests(unittest.TestCase):
     def test_interface_has_expected_review_controls(self):
         for element_id in (
             "playButton",
+            "interactionModeButton",
+            "interactionModeText",
             "nowSpeaker",
             "nowCaption",
             "undoButton",
@@ -122,6 +124,14 @@ class ReviewAssetTests(unittest.TestCase):
             "cutResetButton",
         ):
             self.assertIn(f'id="{element_id}"', HTML)
+
+    def test_toolbar_is_sticky_and_modes_have_separate_word_actions(self):
+        self.assertIn('class="workspace-toolbar"', HTML)
+        self.assertRegex(CSS, r"\.workspace-toolbar\s*\{[^}]*position:\s*sticky", re.S)
+        self.assertIn('interactionMode: "play"', JS)
+        self.assertIn('state.interactionMode === "play"', JS)
+        self.assertIn('state.interactionMode !== "edit"', JS)
+        self.assertIn('seekFromTranscript(Number(wordElement.dataset.startMs), true)', JS)
 
     def test_waveform_does_not_cover_audio_with_usage_instructions(self):
         self.assertNotIn('id="waveformEmpty"', HTML)
