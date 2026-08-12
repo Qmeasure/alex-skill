@@ -16,7 +16,7 @@ from podcast_editor.contracts import ApiStateUpdate, project_word_ids
 from podcast_editor.storage import read_json
 from podcast_editor.server import create_server
 from podcast_editor.storage import ProjectStore
-from podcast_editor.workflow import prepare_project
+from podcast_editor.workflow import prepare_project, retranscribe_project
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -26,6 +26,9 @@ def build_parser() -> argparse.ArgumentParser:
     prepare = subparsers.add_parser("prepare", help="转录音频并建立审核项目")
     prepare.add_argument("--input", action="append", required=True, help="音频路径；多人分轨时重复传入")
     prepare.add_argument("--workdir", help="工作目录；未指定时写入桌面 output 目录")
+
+    retranscribe = subparsers.add_parser("retranscribe", help="使用原始音频重新识别并覆盖审核项目")
+    retranscribe.add_argument("--project", required=True, help="包含 project.json 的工作目录")
 
     serve = subparsers.add_parser("serve", help="启动本地审核页")
     serve.add_argument("--project", required=True, help="包含 project.json 的工作目录")
@@ -47,6 +50,23 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "prepare":
             store = prepare_project(args.input, args.workdir)
             print(json.dumps({"projectPath": str(store.root)}, ensure_ascii=False))
+            return 0
+
+        if args.command == "retranscribe":
+            store = retranscribe_project(args.project)
+            project = store.load_project()
+            state = store.load_state(project)
+            print(
+                json.dumps(
+                    {
+                        "projectPath": str(store.root),
+                        "speakerCount": len(project["speakers"]),
+                        "utteranceCount": len(project["utterances"]),
+                        "selectedWordCount": len(state["selectedWordIds"]),
+                    },
+                    ensure_ascii=False,
+                )
+            )
             return 0
 
         if args.command == "seed-selection":

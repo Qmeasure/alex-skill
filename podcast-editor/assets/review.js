@@ -3,7 +3,6 @@
 
   const SPEAKER_COLORS = ["#18794e", "#a05c17", "#256aa3", "#934b75", "#5d6d2e", "#8a4d38"];
   const SAVE_DELAY_MS = 420;
-  const WORD_CLICK_DELAY_MS = 240;
   const SHORT_REQUEST_TIMEOUT_MS = 30_000;
   const CANCEL_REQUEST_TIMEOUT_MS = 15_000;
   const LONG_REQUEST_TIMEOUT_MS = 2 * 60 * 60 * 1000;
@@ -21,6 +20,8 @@
     cancelButton: document.querySelector("#cancelButton"),
     exportButton: document.querySelector("#exportButton"),
     playButton: document.querySelector("#playButton"),
+    interactionModeButton: document.querySelector("#interactionModeButton"),
+    interactionModeText: document.querySelector("#interactionModeText"),
     nowSpeaker: document.querySelector("#nowSpeaker"),
     nowCaption: document.querySelector("#nowCaption"),
     seekSlider: document.querySelector("#seekSlider"),
@@ -66,6 +67,7 @@
     cutOverrides: {},
     previewTimeline: null,
     playbackMode: "live",
+    interactionMode: "play",
     playbackFrame: null,
     previewUtterances: null,
     revision: 0,
@@ -88,7 +90,6 @@
     operationController: null,
     operationCancelled: false,
     cancelBusy: false,
-    pendingWordClickTimer: null,
     pendingSeekMs: null,
     pendingSeekBound: false,
     audioContext: null,
@@ -256,6 +257,17 @@
 
   function wordCountLabel() {
     elements.selectionSummary.textContent = `已划掉 ${state.selectedWordIds.size} 字`;
+  }
+
+  function setInteractionMode(mode) {
+    state.interactionMode = mode === "edit" ? "edit" : "play";
+    const editing = state.interactionMode === "edit";
+    elements.interactionModeButton.setAttribute("aria-pressed", String(editing));
+    elements.interactionModeButton.title = editing ? "当前为编辑模式" : "当前为播放模式";
+    elements.interactionModeText.textContent = editing ? "编辑模式" : "播放模式";
+    elements.interactionModeButton.querySelector(".mode-icon").innerHTML = editing ? "&#9998;" : "&#9654;";
+    elements.transcript.dataset.interactionMode = state.interactionMode;
+    syncWordSelectionClasses();
   }
 
   function snapshot() {
@@ -538,7 +550,9 @@
           const selected = state.selectedWordIds.has(word.id);
           wordButton.classList.toggle("is-selected", selected);
           wordButton.setAttribute("aria-pressed", String(selected));
-          wordButton.title = selected ? "保留这个字词" : "划掉这个字词";
+          wordButton.title = state.interactionMode === "edit"
+            ? (selected ? "保留这个字词" : "划掉这个字词")
+            : "从这个字词开始播放";
           words.appendChild(wordButton);
           if (word.punctuationAfter) {
             const punctuation = document.createElement("span");
@@ -565,7 +579,9 @@
       const selected = state.selectedWordIds.has(wordElement.dataset.wordId);
       wordElement.classList.toggle("is-selected", selected);
       wordElement.setAttribute("aria-pressed", String(selected));
-      wordElement.title = selected ? "保留这个字词" : "划掉这个字词";
+      wordElement.title = state.interactionMode === "edit"
+        ? (selected ? "保留这个字词" : "划掉这个字词")
+        : "从这个字词开始播放";
     });
   }
 
@@ -628,7 +644,7 @@
   }
 
   function startWordDrag(event, wordElement) {
-    if (event.button !== 0 || isBusy()) {
+    if (state.interactionMode !== "edit" || event.button !== 0 || isBusy()) {
       return;
     }
     event.preventDefault();
@@ -636,12 +652,10 @@
     drag.targetSelected = !state.selectedWordIds.has(wordElement.dataset.wordId);
     drag.visited = new Set();
     drag.changed = false;
-    drag.started = !state.previewUtterances;
+    drag.started = true;
     drag.originElement = wordElement;
-    if (drag.started) {
-      pushHistory();
-      visitDraggedWord(wordElement);
-    }
+    pushHistory();
+    visitDraggedWord(wordElement);
   }
 
   function visitDraggedWord(wordElement) {
@@ -1877,13 +1891,21 @@
     prepareLiveAt(logicalMs || 0, resume).catch((error) => enterDeckError(error));
   }
 
-  function seekFromTranscript(originalMs) {
+  async function seekFromTranscript(originalMs, startPlayback = false) {
     const timeline = state.playbackMode === "preview" ? state.previewTimeline : state.liveTimeline;
     const logicalMs = sourceToTarget(timeline, originalMs);
     if (state.playbackMode === "preview") {
       setAudioTime(logicalMs);
+      if (startPlayback && elements.audio.paused) {
+        try {
+          await elements.audio.play();
+          runPlaybackFrame();
+        } catch (_error) {
+          setStatus("error", "音频无法播放", false);
+        }
+      }
     } else {
-      prepareLiveAt(logicalMs, state.livePlaying).catch((error) => enterDeckError(error));
+      await prepareLiveAt(logicalMs, startPlayback || state.livePlaying);
     }
   }
 
@@ -2348,29 +2370,26 @@
     elements.transcript.addEventListener("click", (event) => {
       const seekButton = event.target.closest("[data-seek-ms]");
       if (seekButton) {
-        seekFromTranscript(Number(seekButton.dataset.seekMs));
+        seekFromTranscript(Number(seekButton.dataset.seekMs), state.interactionMode === "play")
+          .catch((error) => enterDeckError(error));
         return;
       }
       const wordElement = event.target.closest("[data-word-id]");
-      if (wordElement && event.detail === 0 && !isBusy()) {
+      if (!wordElement || isBusy()) {
+        return;
+      }
+      if (state.interactionMode === "play") {
+        seekFromTranscript(Number(wordElement.dataset.startMs), true)
+          .catch((error) => enterDeckError(error));
+      } else if (event.detail === 0) {
         toggleWordSelection(wordElement.dataset.wordId);
-      } else if (wordElement && event.detail === 1 && state.previewUtterances && !isBusy()) {
-        window.clearTimeout(state.pendingWordClickTimer);
-        state.pendingWordClickTimer = window.setTimeout(() => {
-          toggleWordSelection(wordElement.dataset.wordId);
-        }, WORD_CLICK_DELAY_MS);
-      } else if (wordElement && event.detail > 1) {
-        window.clearTimeout(state.pendingWordClickTimer);
       }
     });
 
-    elements.transcript.addEventListener("dblclick", (event) => {
-      const wordElement = event.target.closest("[data-word-id]");
-      if (!wordElement) {
-        return;
+    elements.interactionModeButton.addEventListener("click", () => {
+      if (!isBusy()) {
+        setInteractionMode(state.interactionMode === "play" ? "edit" : "play");
       }
-      window.clearTimeout(state.pendingWordClickTimer);
-      seekFromTranscript(Number(wordElement.dataset.startMs));
     });
 
     elements.seekSlider.addEventListener("input", () => {
@@ -2400,7 +2419,6 @@
       setStatus("error", "音频载入失败", false);
     });
     window.addEventListener("pagehide", () => {
-      window.clearTimeout(state.pendingWordClickTimer);
       if (typeof navigator.sendBeacon === "function") {
         try {
           navigator.sendBeacon(
@@ -2555,6 +2573,7 @@
       state.previewTimeline = null;
       state.playbackMode = "live";
       state.previewUtterances = null;
+      setInteractionMode("play");
       elements.audio.dataset.timeline = "live";
       elements.audio.dataset.planId = state.cutPlan.planId;
       elements.audio.dataset.cutPending = "false";

@@ -13,6 +13,7 @@
 | 把 Obsidian Markdown 导出成 Word | [`obsidian-to-docx`](./obsidian-to-docx/SKILL.md) | `.docx` | 不研究、不建模、不补写内容 |
 | 复盘上周推荐的股票 | [`pitch-review`](./pitch-review/SKILL.md) | 带行情图的 Markdown 复盘报告 | 不做全市场选股、首次覆盖或估值建模 |
 | 把投资研讨录音转成 Gamma/PPT 大纲 | [`gamma-ppt-outline`](./gamma-ppt-outline/SKILL.md) | 可导入 Gamma 的 Markdown 大纲 | 不输出会议纪要，也不处理没有转录文本的音频 |
+| 转录并剪掉播客口误，审核后交付剪映草稿 | [`podcast-editor`](./podcast-editor/SKILL.md) | 剪映音频草稿 | 逐字审核页只是审核工具；不处理视频，也不导出成品音频或 FCPXML |
 | 把长文档整理成适合打印或插入报告的结构图 | [`document-structure-map`](./document-structure-map/SKILL.md) | 纵向结构图 HTML/长图 | 不适合手机转发长图 |
 | 把研究材料做成微信、公众号或手机长图 | [`long-image`](./long-image/SKILL.md) | 1080px 竖版长图，必要时 Internal/External 双版 | 不适合打印版结构图 |
 | 把文本做成一张逻辑树思维导图 | [`text-to-mindmap`](./text-to-mindmap/SKILL.md) | 竖向逻辑树 PNG | 不输出 XMind/FreeMind，也不做横向或放射状导图 |
@@ -20,6 +21,7 @@
 | 核查一篇已有文稿里的数字和事实 | [`doc-data-verify`](./doc-data-verify/SKILL.md) | 6 字段核查表、可确认的修正稿 | 不适合没有事实数据的纯润色 |
 | 在回答前核验当前数据、职位、价格、法规或产品信息 | [`verify-before-answer`](./verify-before-answer/SKILL.md) | 带来源、时间和置信度的回答 | 这是通用核验纪律，不是文稿核查器 |
 | 把中文改得更自然，去掉 AI 味和翻译腔 | [`de-ai-flavor-zh`](./de-ai-flavor-zh/SKILL.md) | 改写后的中文文本 | 不适合英文、纯数据查询或事实核查 |
+| 修改微信公众号文章：核事实、修结构、清元话和改稿痕迹、同步 HTML 跑校验 | [`wechat-article-revise`](./wechat-article-revise/SKILL.md) | 改后的 md 正文、同步过的公众号 HTML、校验与预览产物 | 不适合英文、未成稿的选题构思或纯事实查询 |
 | 为另一个 AI 写执行任务的 prompt | [`directional-prompt-writer`](./directional-prompt-writer/SKILL.md) | 方向性 prompt | 不适合写给人执行的流程文档 |
 | 让 AI 或用户围绕一个方案持续追问、锁定决策 | [`grill-me`](./grill-me/SKILL.md) | 多轮质询对话 | 不生成方案，也不提供降级方案或 mock 数据 |
 
@@ -37,6 +39,7 @@
 
 - **“复盘上周推票”**：用 `pitch-review`。它验证既有推荐是否兑现，不修改原推票，也不替用户重新选股。
 - **“录音整理成 PPT/Gamma”**：用 `gamma-ppt-outline`。必须有 `txt` 或 `srt` 转录文本；内容只能来自录音。
+- **“剪播客或音频口误”**：用 `podcast-editor`。一个文件按合成音轨处理，多个文件按嘉宾分轨处理；用户逐字确认后生成剪映音频草稿。
 - **“一图看懂这份长文档的结构”**：用 `document-structure-map`。重点是论证骨架、证据链、风险和章节关系。
 - **“做成手机上看的研究长图”**：用 `long-image`。有针对具体标的的评级、估值、目标价或交易建议时，生成 Internal/External 双版。
 - **“做一张思维导图图片”**：用 `text-to-mindmap`。输出固定为竖向逻辑树 PNG。
@@ -45,6 +48,7 @@
 ### 写作和核验
 
 - **“这段太 AI 了，改自然点”**：用 `de-ai-flavor-zh`。重点不是换几个词，而是删除空架子、补清因果和机制。
+- **“改一下这篇公众号文章”“这个标题没写明白”“完全看不懂”“背景没交代清楚”“这些都不核心”**：用 `wechat-article-revise`。五道检查按顺序过：事实层（数字回溯、优先用被批评材料自身的内部证据）、结构层（标题只写分析手法、段首用分类标签、自创比喻、论证跳过前提、只贴标签不说理、结论章用通用框架、人造分组、条目重叠）、洁净度（元话、改稿痕迹、设问自答、跨章引用、首尾呼应、无关花絮）、句子层（转 `de-ai-flavor-zh`）、交付层（md↔HTML 同步、跑校验、重建预览、手机宽度实测）。
 - **“核实这篇文章的数据”**：用 `doc-data-verify`。它逐项核验原文数据，并区分一致、不一致、已过期、缺失、冲突。
 - **“现在的价格、职位、政策、版本是多少”**：按 `verify-before-answer` 先查证，再回答。任何当前事实、具体数字或产品 API 信息都不能只凭记忆。
 - **“帮我写一个给 Claude/GPT 的 prompt”**：用 `directional-prompt-writer`。写目标、方法、约束和质量标准，不把一个想象中的答案写死。
@@ -76,6 +80,16 @@
 
 - `long-image` 是一张可向下延伸的研究长图，适合完整内容摘要和合规分版。
 - `carousel-image-renderer` 是多张固定尺寸卡片，适合文章、报告和数据贴的分页阅读。
+
+### `wechat-article-revise`、`de-ai-flavor-zh` 和 `gzh-html-adapter`
+
+三者都参与公众号文章的交付，分工不重叠，`wechat-article-revise` 是总流程，另外两个是它调用的环节：
+
+- `wechat-article-revise` 管**整条改稿流水线**：核事实 → 修结构 → 清成品脏话 → 转句子层 → 同步 HTML 并校验。
+- `de-ai-flavor-zh` 管**句子层**：这句话读起来像不像人写的。对付套话、三段排比、伪分析尾巴、硬翻译词、装饰性比喻。
+- `gzh-html-adapter` 管**格式转换**：把定稿 Markdown 转成公众号可粘贴的内联样式 HTML，提供 `validate_gzh_html.py` 和 `build_preview.py`。
+- 判断口诀：句子通顺但读者还是不知道这节在讲什么，用 `wechat-article-revise`；意思都懂但读着一股 AI 腔，用 `de-ai-flavor-zh`；文章定稿了只差转 HTML，用 `gzh-html-adapter`。
+- 顺序要求：先定结构再抠措辞。结构没定就去改句子，改完的句子会被下一轮结构调整整段删掉。
 
 ### `verify-before-answer` 和 `doc-data-verify`
 

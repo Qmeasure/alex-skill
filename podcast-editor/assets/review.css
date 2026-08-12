@@ -38,6 +38,13 @@ select:focus-visible {
   min-height: 100vh;
 }
 
+.workspace-toolbar {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  box-shadow: 0 8px 18px rgba(23, 32, 27, 0.12);
+}
+
 .topbar,
 .player-band,
 .controls-band,
@@ -97,6 +104,7 @@ h2 {
 .secondary-button,
 .cancel-button,
 .icon-text-button,
+.mode-button,
 .text-button,
 .filter-button,
 .utterance-seek {
@@ -108,7 +116,8 @@ h2 {
 .primary-button,
 .secondary-button,
 .cancel-button,
-.icon-text-button {
+.icon-text-button,
+.mode-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -131,13 +140,15 @@ h2 {
 
 .secondary-button,
 .cancel-button,
-.icon-text-button {
+.icon-text-button,
+.mode-button {
   border-color: #c8d0ca;
   background: #ffffff;
 }
 
 .secondary-button:hover:not(:disabled),
-.icon-text-button:hover:not(:disabled) {
+.icon-text-button:hover:not(:disabled),
+.mode-button:hover:not(:disabled) {
   border-color: #8f9c93;
   background: #f8faf8;
 }
@@ -296,6 +307,22 @@ button:disabled {
   gap: 20px;
   border-bottom: 1px solid #d7ddd8;
   background: #ffffff;
+}
+
+.mode-button {
+  min-width: 112px;
+  border-color: #8f9c93;
+}
+
+.mode-button[aria-pressed="true"] {
+  border-color: #166541;
+  color: #ffffff;
+  background: #18794e;
+}
+
+.mode-icon {
+  width: 16px;
+  text-align: center;
 }
 
 .icon-text-button {
@@ -766,6 +793,10 @@ button:disabled {
     flex-direction: column;
     padding-top: 12px;
     padding-bottom: 12px;
+  }
+
+  .mode-button {
+    width: 100%;
   }
 
   .speaker-filters {

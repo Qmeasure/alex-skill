@@ -41,7 +41,7 @@
 max-width:100%;box-sizing:border-box;margin:1em 0;font-family:inherit
 ```
 
-图表颜色服从本篇文章的设计方向。同一类数据在全文使用相同颜色，边框、标签和说明的用色保持一致，并保证文字与所在背景清楚可读；不套用固定配色，也不为每类图表另起一套风格。
+图表颜色取自 [visual-system.md](visual-system.md) 的固定色板。系列按 `#2B6EF2` → `#1B3A6B` → `#6FA0E8` → `#E0A458` 的顺序取用，超过四个系列时保留数据表不画图；`#C0392B` 只标负值与未达标，不参与轮转。轨道一律 `#F2F6FC`，容器边框 `#D8E2F0`。同一类数据在全文使用相同颜色。
 
 比例计算只改变 `width` 或 `height`：
 
@@ -56,13 +56,10 @@ max-width:100%;box-sizing:border-box;margin:1em 0;font-family:inherit
 
 ## 数据表
 
-使用原生 `table`、`thead`、`tbody`、`tr`、`th`、`td`。设置：
+使用原生 `table`、`thead`、`tbody`、`tr`、`th`、`td`，样式照抄
+[visual-system.md](visual-system.md) 的表格片段，保留原始表头、单位和脚注。
 
-```text
-width:100%;border-collapse:collapse;table-layout:fixed
-```
-
-每个单元格使用本篇统一的边框色，并保留原始表头、单位和脚注。
+列数决定排版档位：≤4 列用 14px，5–6 列降到 13px 并收紧 padding，超过 6 列转纵向分组块。分组块的结构见同一份文档的「宽表策略」，只改排列方式，不合并字段、不省略空值。
 
 ## 横向条形图
 
@@ -113,5 +110,6 @@ width:100%;border-collapse:collapse;table-layout:fixed
 - 用视觉长度代替数值标签。
 - 根据上下文补齐缺失年份或缺失值。
 - 为了凑满宽度修改占比。
-- 图表配色与正文脱节，或文字和背景难以分辨。
+- 使用色板外的颜色，或给条形、轨道自创配色。
+- 七列以上的宽表硬塞成表格，在手机上每格只剩两三个字宽。
 - 使用 SVG、Canvas、背景图片或脚本。

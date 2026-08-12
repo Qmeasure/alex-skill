@@ -13,15 +13,28 @@ from build_preview import build_preview, default_output_path  # noqa: E402
 
 
 BODY = (
-    '<section style="max-width:100%;box-sizing:border-box;background:#f7f8fb;'
-    'color:#263238;'
+    '<section style="max-width:100%;box-sizing:border-box;background:#FFFFFF;'
+    'color:#1A1A1A;'
     'font-family:inherit;">'
-    '<p style="margin:0;line-height:1.75;color:#263238;">'
+    '<p style="margin:0;font-size:16px;line-height:1.75;color:#1A1A1A;">'
     '<span leaf="">正文</span></p></section>'
 )
 
 
 class BuildPreviewTests(unittest.TestCase):
+    def test_shipped_sample_preview_matches_sample_body(self) -> None:
+        body = SKILL_ROOT / "assets" / "sample-body.html"
+        shipped = SKILL_ROOT / "assets" / "sample-preview.html"
+        self.assertTrue(shipped.is_file(), "assets/sample-preview.html 缺失")
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            rebuilt = build_preview(body, Path(temp_dir) / "sample-preview.html")
+            self.assertEqual(
+                shipped.read_text(encoding="utf-8"),
+                rebuilt.read_text(encoding="utf-8"),
+                "样张预览页已过期，请重新运行 build_preview.py 生成 assets/sample-preview.html",
+            )
+
     def test_default_output_name(self) -> None:
         source = Path("/tmp/文章_公众号正文.html")
         self.assertEqual(
