@@ -3,7 +3,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
-import { parseDocument, validateDocument } from "./render.mjs";
+import { parseDocument, validateDocument } from "./parser.mjs";
 
 async function main() {
   const input = process.argv[2];

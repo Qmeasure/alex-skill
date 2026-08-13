@@ -198,7 +198,7 @@ node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图
 - `--endcard guided`（**默认**）：品牌卡内通栏一行截图指引"截图本页 → 微信扫一扫 → 从相册识别"。视频号图文里长按屏幕会触发加速播放，无法直接识别二维码，必须引导用户截图后到微信扫一扫从相册识别。
 - `--endcard legacy`：2026年8月前的旧版文案，二维码下方小字"扫码加入研报交流"，用于渲染历史版本做对照。
 
-新增导流版本时，在 `assets/endcard.js` 的 `__ENDCARD_COPY` 中增加变体文案，并在 `scripts/render.mjs` 的 `SUPPORTED_ENDCARD_VARIANTS` 中注册。页面构建脚本拆分为 `assets/cover.js`（封面）、`assets/runtime.js`（正文分页与编排）、`assets/endcard.js`（导流页），由 `render.mjs` 按此顺序注入。
+新增导流版本时，在 `assets/endcard.js` 的 `__ENDCARD_COPY` 中增加变体文案，并在 `scripts/render.mjs` 的 `SUPPORTED_ENDCARD_VARIANTS` 中注册。页面构建脚本拆分为 `assets/cover.js`（封面）、`assets/runtime.js`（正文分页与编排）、`assets/endcard.js`（导流页），由 `render.mjs` 按此顺序注入。Node 侧脚本同样按职责拆分：`scripts/parser.mjs`（Markdown 解析与格式校验，`validate.mjs` 也用它）、`scripts/images.mjs`（本地图片 base64 嵌入）、`scripts/browser.mjs`（Playwright 与浏览器探测）、`scripts/render.mjs`（渲染编排与渲染检查）。
 
 ### 8. 审计
 
