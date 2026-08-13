@@ -102,7 +102,7 @@ export function plainText(value) {
 
 function parseFrontMatter(source) {
   const normalized = source.replace(/\r\n?/g, "\n");
-  if (!normalized.startsWith("---\n")) return { meta: {}, body: normalized };
+  if (!normalized.startsWith("---\n")) return { meta: {}, body: normalized, bodyLineOffset: 0 };
 
   const closing = normalized.indexOf("\n---\n", 4);
   if (closing === -1) throw new Error("Front matter starts with --- but has no closing --- line.");
@@ -119,7 +119,9 @@ function parseFrontMatter(source) {
     if (!key) throw new Error(`Invalid empty front matter key on line ${index + 2}.`);
     meta[key] = parseScalar(line.slice(separator + 1));
   });
-  return { meta, body: normalized.slice(closing + 5) };
+  const bodyStart = closing + 5;
+  const bodyLineOffset = (normalized.slice(0, bodyStart).match(/\n/g) || []).length;
+  return { meta, body: normalized.slice(bodyStart), bodyLineOffset };
 }
 
 function parseDirective(name, content, lineNumber, inline) {
@@ -168,11 +170,13 @@ function extractFootnotes(body) {
       continue;
     }
     const content = [match[2]];
+    kept.push("");
     while (index + 1 < lines.length && /^(?: {2,}|\t)\S/.test(lines[index + 1])) {
       content.push(lines[index + 1].trim());
+      kept.push("");
       index += 1;
     }
-    definitions.push({ id: match[1], raw: content.join(" ").trim() });
+    definitions.push({ id: match[1], raw: content.join(" ").trim(), line: index - content.length + 2 });
   }
   return { body: kept.join("\n"), definitions };
 }
@@ -308,7 +312,7 @@ function isBlockStart(lines, index) {
   return index + 1 < lines.length && line.includes("|") && isTableDelimiter(lines[index + 1]);
 }
 
-function parseBlocks(body, meta, footnotes) {
+function parseBlocks(body, meta, footnotes, lineOffset = 0) {
   const lines = body.split("\n");
   const blocks = [];
   const footnoteNumbers = new Map(footnotes.map((definition, index) => [definition.id, index + 1]));
@@ -329,12 +333,13 @@ function parseBlocks(body, meta, footnotes) {
       const language = fence[2] || "";
       const raw = [];
       const startLine = index + 1;
+      const sourceLine = lineOffset + startLine;
       index += 1;
       while (index < lines.length && !new RegExp(`^\\s*${marker}{${minimumLength},}\\s*$`).test(lines[index])) {
         raw.push(lines[index]);
         index += 1;
       }
-      if (index >= lines.length) throw new Error(`Code fence near line ${startLine} is not closed.`);
+      if (index >= lines.length) throw new Error(`Code fence near line ${sourceLine} is not closed.`);
       blocks.push({ type: "code", language, raw: raw.join("\n") });
       index += 1;
       continue;
@@ -349,45 +354,43 @@ function parseBlocks(body, meta, footnotes) {
         continue;
       }
       const startLine = index + 1;
+      const sourceLine = lineOffset + startLine;
       index += 1;
       const content = [];
       while (index < lines.length && lines[index].trim() !== ":::") {
         content.push(lines[index]);
         index += 1;
       }
-      if (index >= lines.length) throw new Error(`Directive :::${name} near line ${startLine} is not closed.`);
-      blocks.push(parseDirective(name, content.join("\n"), startLine, inline));
+      if (index >= lines.length) throw new Error(`Directive :::${name} near line ${sourceLine} is not closed.`);
+      blocks.push({ ...parseDirective(name, content.join("\n"), sourceLine, inline), line: startLine });
       index += 1;
       continue;
     }
 
     const heading = line.match(/^(#{1,6})\s+(.+)$/);
     if (heading) {
-      if (heading[1].length === 1 && !meta.title) {
-        meta.title = plainText(heading[2]);
-      } else {
-        blocks.push({ type: "heading", level: heading[1].length, html: inline(heading[2]), raw: heading[2] });
-      }
+      blocks.push({ type: "heading", level: heading[1].length, html: inline(heading[2]), raw: heading[2], line: index + 1 });
       index += 1;
       continue;
     }
 
     if (index + 1 < lines.length && line.includes("|") && isTableDelimiter(lines[index + 1])) {
+      const startLine = index + 1;
       const parsed = parseTable(lines, index, inline);
-      blocks.push(parsed.block);
+      blocks.push({ ...parsed.block, line: startLine });
       index = parsed.nextIndex;
       continue;
     }
 
     if (isHorizontalRule(line)) {
-      blocks.push({ type: "hr" });
+      blocks.push({ type: "hr", line: index + 1 });
       index += 1;
       continue;
     }
 
     const image = parseImageLine(line);
     if (image) {
-      blocks.push({ type: "image", ...image, captionHtml: inline(image.title || image.alt) });
+      blocks.push({ type: "image", ...image, captionHtml: inline(image.title || image.alt), line: index + 1 });
       index += 1;
       continue;
     }
@@ -398,7 +401,7 @@ function parseBlocks(body, meta, footnotes) {
         raw.push(lines[index]);
         index += 1;
       }
-      blocks.push({ type: "html", html: sanitizeRawHtml(raw.join("\n")), raw: raw.join("\n") });
+      blocks.push({ type: "html", html: sanitizeRawHtml(raw.join("\n")), raw: raw.join("\n"), line: index - raw.length + 1 });
       continue;
     }
 
@@ -409,13 +412,14 @@ function parseBlocks(body, meta, footnotes) {
         index += 1;
       }
       const raw = quote.join("\n");
-      blocks.push({ type: "quote", html: inline(raw), raw });
+      blocks.push({ type: "quote", html: inline(raw), raw, line: index - quote.length + 1 });
       continue;
     }
 
     if (matchListLine(line)) {
+      const startLine = index + 1;
       const parsed = parseList(lines, index, inline);
-      blocks.push(parsed.block);
+      blocks.push({ ...parsed.block, line: startLine });
       index = parsed.nextIndex;
       continue;
     }
@@ -427,16 +431,18 @@ function parseBlocks(body, meta, footnotes) {
       index += 1;
     }
     const raw = paragraph.join("\n");
-    blocks.push({ type: "paragraph", html: inline(raw), raw });
+    blocks.push({ type: "paragraph", html: inline(raw), raw, line: index - paragraph.length + 1 });
   }
   if (footnotes.length) {
     blocks.push({
       type: "footnotes",
+      line: footnotes[0].line,
       items: footnotes.map((definition, index) => ({
         id: definition.id,
         number: index + 1,
         html: inline(definition.raw),
-        raw: definition.raw
+        raw: definition.raw,
+        line: definition.line
       }))
     });
   }
@@ -472,7 +478,7 @@ function countWords(blocks) {
 }
 
 export function parseDocument(source) {
-  const { meta: suppliedMeta, body } = parseFrontMatter(source);
+  const { meta: suppliedMeta, body, bodyLineOffset } = parseFrontMatter(source);
   const meta = {
     title: "",
     subtitle: "",
@@ -482,7 +488,10 @@ export function parseDocument(source) {
     ...suppliedMeta
   };
   const extracted = extractFootnotes(body);
-  const blocks = parseBlocks(extracted.body, meta, extracted.definitions);
+  const blocks = parseBlocks(extracted.body, meta, extracted.definitions, bodyLineOffset);
+  blocks.forEach((block) => {
+    if (block.line != null) block.line += bodyLineOffset;
+  });
   meta.title = String(meta.title || "").trim();
   meta.subtitle = String(meta.subtitle || "").trim();
   meta.kicker = String(meta.kicker || "图文报告").trim();
@@ -500,34 +509,129 @@ export function parseDocument(source) {
 export function validateDocument(document) {
   const errors = [];
   const warnings = [];
-  if (!document.meta.title) errors.push("Missing title. Add front matter title or a level-one heading.");
+  const addError = (code, message, details = {}) => errors.push({ code, message, ...details });
+  const addWarning = (code, message, details = {}) => warnings.push({ code, message, ...details });
+  if (!document.meta.title) {
+    addError("E_TITLE_REQUIRED", "Front matter must contain a non-empty title.", {
+      expected: "A one-line `title:` field in front matter",
+      action: "Add the final cover title to front matter; body H1 headings are not a fallback."
+    });
+  }
+  if (!document.meta.cover) {
+    addError("E_COVER_REQUIRED", "The branded carousel must include its cover page.", {
+      actual: "cover: false",
+      expected: "cover: true or an omitted cover field",
+      action: "Remove `cover: false` or set `cover: true`."
+    });
+  }
   if (!SUPPORTED_THEMES.has(document.meta.theme)) {
-    errors.push(`Unsupported theme "${document.meta.theme}". Use classic, finance, editorial, or tech.`);
+    addError("E_THEME_UNSUPPORTED", `Unsupported theme "${document.meta.theme}".`, {
+      actual: document.meta.theme,
+      expected: "classic, finance, editorial, or tech",
+      action: "Set front matter `theme` to one of the supported values."
+    });
   }
   const visibleBlocks = document.blocks.filter((block) => block.type !== "pagebreak");
-  if (!visibleBlocks.length) errors.push("The article has no renderable content blocks.");
+  if (!visibleBlocks.length) {
+    addError("E_BODY_EMPTY", "The article has no renderable content blocks.", {
+      expected: "At least one body content block",
+      action: "Add article body content below front matter."
+    });
+  }
+  if (!document.blocks.some((block) => block.type === "risk")) {
+    addError("E_RISK_REQUIRED", "Every carousel must contain at least one non-empty :::risk block.", {
+      expected: "At least one non-empty :::risk directive",
+      action: "Add a concise risk disclosure grounded in the source material."
+    });
+  }
+  const thumbnailIndexes = document.blocks.map((block, index) => block.type === "thumbnails" ? index : -1).filter((index) => index >= 0);
+  if (!thumbnailIndexes.length) {
+    addError("E_THUMBNAILS_REQUIRED", "Every carousel must end with source thumbnails.", {
+      expected: "One non-empty :::thumbnails directive",
+      action: "Run source-prep.mjs and insert its generated thumbnail paths at the end of the Markdown."
+    });
+  } else {
+    if (thumbnailIndexes.length > 1) {
+      addError("E_THUMBNAILS_MULTIPLE", "Only one :::thumbnails directive is allowed.", {
+        actual: thumbnailIndexes.length,
+        expected: 1,
+        action: "Merge all thumbnail images into the final :::thumbnails block."
+      });
+    }
+    const lastContentIndex = document.blocks.reduce((last, block, index) => block.type === "pagebreak" ? last : index, -1);
+    if (thumbnailIndexes.at(-1) !== lastContentIndex) {
+      addError("E_THUMBNAILS_POSITION", "The :::thumbnails directive must be the final content block.", {
+        action: "Move :::thumbnails after all body content and remove content that follows it."
+      });
+    }
+    const thumbnailBlock = document.blocks[thumbnailIndexes[0]];
+    if (thumbnailBlock?.images?.length > 4) {
+      addError("E_THUMBNAILS_COUNT", "The endcard supports at most four source thumbnails.", {
+        line: thumbnailBlock.line,
+        actual: thumbnailBlock.images.length,
+        expected: "1–4 thumbnails",
+        action: "Use source-manifest.json `thumbnailMarkdown`, which selects at most four previews across all source groups."
+      });
+    }
+  }
+
+  const listProse = (block) => block.items.map((item) => [
+    plainText(item.raw),
+    ...(item.children || []).map((child) => listProse(child))
+  ].join(" ")).join(" ");
+  const proseForBlock = (block) => {
+    if (["code", "thumbnails", "pagebreak", "hr"].includes(block.type)) return "";
+    if (block.type === "image") return plainText(block.title || block.alt || "");
+    if (block.raw != null) return plainText(block.raw);
+    if (block.type === "list") return listProse(block);
+    if (block.type === "metrics") return block.items.map((item) => `${item.label} ${item.value}`).join(" ");
+    if (block.type === "table") return [
+      ...block.headers.map((cell) => cell.raw),
+      ...block.rows.flat().map((cell) => cell.raw)
+    ].join(" ");
+    if (block.type === "footnotes") return block.items.map((item) => plainText(item.raw)).join(" ");
+    return "";
+  };
+  document.blocks.forEach((block) => {
+    const prose = proseForBlock(block);
+    const occurrences = (prose.match(/你/g) || []).length;
+    if (occurrences) {
+      addError("E_BODY_SECOND_PERSON", "Body copy must not use the second-person character “你”.", {
+        line: block.line,
+        actual: `你 × ${occurrences}`,
+        expected: "Objective wording with the subject omitted or named explicitly",
+        action: "Rewrite the sentence without second-person or generic audience substitutions."
+      });
+    }
+  });
   document.blocks.forEach((block, index) => {
     if (block.type === "paragraph" && plainText(block.raw).length > 700) {
-      warnings.push(`Paragraph block ${index + 1} is longer than 700 characters and may not fit on one page.`);
+      addWarning("W_PARAGRAPH_LONG", `Paragraph block ${index + 1} is longer than 700 characters and may not fit on one page.`, {
+        line: block.line,
+        action: "Split the paragraph at a complete thought if it overflows."
+      });
     }
     if (["circle", "wavy", "accent"].some((mark) => {
       const opens = (block.raw?.match(new RegExp(`\\{${mark}\\}`, "g")) || []).length;
       const closes = (block.raw?.match(new RegExp(`\\{\\/${mark}\\}`, "g")) || []).length;
       return opens !== closes;
     })) {
-      errors.push(`Unbalanced inline mark in block ${index + 1}.`);
+      addError("E_INLINE_MARK_UNBALANCED", `Unbalanced inline mark in block ${index + 1}.`, {
+        line: block.line,
+        action: "Add the matching closing mark in the same paragraph."
+      });
     }
     if (block.type === "table" && block.columnCount > 5) {
-      warnings.push(`Table block ${index + 1} has ${block.columnCount} columns; 5 or fewer columns are recommended for a 1080px card.`);
+      addWarning("W_TABLE_WIDE", `Table block ${index + 1} has ${block.columnCount} columns; 5 or fewer are recommended.`, { line: block.line });
     }
     if (block.type === "table" && block.rows.length > 10) {
-      warnings.push(`Table block ${index + 1} has ${block.rows.length} body rows and may be too tall for one page.`);
+      addWarning("W_TABLE_TALL", `Table block ${index + 1} has ${block.rows.length} body rows and may be too tall for one page.`, { line: block.line });
     }
     if (block.type === "code" && block.raw.split("\n").length > 18) {
-      warnings.push(`Code block ${index + 1} has more than 18 lines and may be too tall for one page.`);
+      addWarning("W_CODE_LONG", `Code block ${index + 1} has more than 18 lines and may be too tall for one page.`, { line: block.line });
     }
     if (block.type === "image" && !block.alt && !block.title) {
-      warnings.push(`Image block ${index + 1} has no alt text or title, so it will render without a caption.`);
+      addWarning("W_IMAGE_UNLABELED", `Image block ${index + 1} has no alt text or title, so it will render without a caption.`, { line: block.line });
     }
   });
   return { errors, warnings };

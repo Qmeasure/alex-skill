@@ -9,7 +9,8 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { parseDocument, validateDocument, plainText } from "./parser.mjs";
 import { embedLocalMarkdownImages } from "./images.mjs";
-import { loadPlaywright, browserLaunchOptions, cleanOwnedOutputs } from "./browser.mjs";
+import { loadPlaywright, browserLaunchOptions, createStagingDirectory, discardStagingDirectory, commitOwnedOutputs } from "./browser.mjs";
+import { diagnostic, diagnosticError, diagnosticsError, diagnosticsFromError, formatDiagnostic, parseFailure } from "./diagnostics.mjs";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const SKILL_DIR = path.resolve(SCRIPT_DIR, "..");
@@ -24,7 +25,7 @@ const MIN_BODY_PAGES = 7;
 const SUPPORTED_ENDCARD_VARIANTS = new Set(["guided", "legacy"]);
 
 function parseArguments(argv) {
-  const options = { input: "", output: "", theme: "", endcard: "" };
+  const options = { input: "", output: "", theme: "", endcard: "", json: false };
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index];
     if (value === "--output" || value === "-o") {
@@ -38,6 +39,8 @@ function parseArguments(argv) {
       index += 1;
     } else if (value === "--cover-only") {
       options.coverOnly = true;
+    } else if (value === "--json") {
+      options.json = true;
     } else if (value === "--help" || value === "-h") {
       options.help = true;
     } else if (value.startsWith("-")) {
@@ -72,31 +75,79 @@ function buildHtml(document, css, runtimeScripts) {
 async function render(inputPath, outputDirectory, themeOverride = "", endcardVariant = "", coverOnly = false) {
   const endcard = String(endcardVariant || "guided").trim().toLowerCase();
   if (!SUPPORTED_ENDCARD_VARIANTS.has(endcard)) {
-    throw new Error(`Unsupported endcard variant "${endcardVariant}". Use guided or legacy.`);
+    throw diagnosticError("E_ENDCARD_UNSUPPORTED", `Unsupported endcard variant "${endcardVariant}".`, {
+      actual: endcardVariant,
+      expected: "guided or legacy",
+      action: "Use --endcard guided or --endcard legacy."
+    });
   }
-  const rawSource = await fs.readFile(inputPath, "utf8");
-  const source = await embedLocalMarkdownImages(rawSource, inputPath);
-  const document = parseDocument(source);
+  let rawSource;
+  try {
+    rawSource = await fs.readFile(inputPath, "utf8");
+  } catch (error) {
+    throw diagnosticError("E_INPUT_READ", "The input Markdown file could not be read.", {
+      location: inputPath,
+      actual: error.message,
+      action: "Confirm the file exists and is readable UTF-8 text, then rerun render.mjs."
+    });
+  }
+  let source;
+  try {
+    source = await embedLocalMarkdownImages(rawSource, inputPath);
+  } catch (error) {
+    throw diagnosticError("E_IMAGE_READ", "A local Markdown image could not be embedded.", {
+      actual: error.message,
+      expected: "Every local image path resolves from the Markdown file directory",
+      action: "Fix the reported image path or regenerate the source thumbnails, then rerun render.mjs."
+    });
+  }
+  let document;
+  try {
+    document = parseDocument(source);
+  } catch (error) {
+    throw diagnosticsError([parseFailure(error)]);
+  }
   if (themeOverride) document.meta.theme = String(themeOverride).trim().toLowerCase();
-  if (coverOnly && !document.meta.cover) throw new Error("--cover-only requires a cover (front matter `cover: false` is set).");
+  if (coverOnly && !document.meta.cover) {
+    throw diagnosticError("E_COVER_REQUIRED", "--cover-only cannot run when front matter sets cover: false.", {
+      action: "Enable the cover or remove --cover-only."
+    });
+  }
   const validation = validateDocument(document);
-  if (validation.errors.length) throw new Error(validation.errors.join("\n"));
-  validation.warnings.forEach((warning) => process.stderr.write(`Warning: ${warning}\n`));
+  if (validation.errors.length) throw diagnosticsError(validation.errors);
+  validation.warnings.forEach((warning) => process.stderr.write(`${formatDiagnostic(warning, "Warning")}\n`));
 
-  const [css, coverScript, endcardScript, runtimeScript, playwright, qrBytes] = await Promise.all([
-    fs.readFile(path.join(SKILL_DIR, "assets/theme.css"), "utf8"),
-    fs.readFile(path.join(SKILL_DIR, "assets/cover.js"), "utf8"),
-    fs.readFile(path.join(SKILL_DIR, "assets/endcard.js"), "utf8"),
-    fs.readFile(path.join(SKILL_DIR, "assets/runtime.js"), "utf8"),
-    loadPlaywright(),
-    fs.readFile(path.join(SKILL_DIR, "assets/zhifujie-qr.png"))
-  ]);
+  let assets;
+  try {
+    assets = await Promise.all([
+      fs.readFile(path.join(SKILL_DIR, "assets/theme.css"), "utf8"),
+      fs.readFile(path.join(SKILL_DIR, "assets/cover.js"), "utf8"),
+      fs.readFile(path.join(SKILL_DIR, "assets/endcard.js"), "utf8"),
+      fs.readFile(path.join(SKILL_DIR, "assets/runtime.js"), "utf8"),
+      loadPlaywright(),
+      fs.readFile(path.join(SKILL_DIR, "assets/zhifujie-qr.png"))
+    ]);
+  } catch (error) {
+    throw diagnosticError("E_RENDER_DEPENDENCY", "A renderer dependency or bundled asset could not be loaded.", {
+      actual: error.message,
+      action: "Run preflight.py. Restore missing assets or install the reported dependency, then rerun render.mjs."
+    });
+  }
+  const [css, coverScript, endcardScript, runtimeScript, playwright, qrBytes] = assets;
   document.meta.brandQr = `data:image/png;base64,${qrBytes.toString("base64")}`;
   document.meta.endcard = endcard;
 
-  await cleanOwnedOutputs(outputDirectory);
-  const browser = await playwright.chromium.launch(await browserLaunchOptions());
+  const stagingDirectory = await createStagingDirectory(outputDirectory);
+  let browser;
   try {
+    try {
+      browser = await playwright.chromium.launch({ ...(await browserLaunchOptions()), timeout: 15000 });
+    } catch (error) {
+      throw diagnosticError("E_BROWSER_LAUNCH", "Chromium could not be launched for rendering.", {
+        actual: error.message,
+        action: "Run preflight.py and repair the reported browser installation or PLAYWRIGHT_CHROMIUM_EXECUTABLE path."
+      });
+    }
     const page = await browser.newPage({
       viewport: { width: PAGE_WIDTH, height: PAGE_HEIGHT },
       deviceScaleFactor: 1
@@ -109,9 +160,16 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
     const brokenImages = await page.evaluate(() => [...document.images]
       .filter((image) => image.naturalWidth === 0)
       .map((image) => image.alt || image.getAttribute("src")?.slice(0, 80) || "unknown image"));
-    if (brokenImages.length) throw new Error(`Markdown image failed to load: ${brokenImages.join(", ")}`);
+    if (brokenImages.length) {
+      throw diagnosticError("E_IMAGE_LOAD", "One or more Markdown images failed to load.", {
+        actual: brokenImages.join(", "),
+        expected: "Every referenced image loads successfully",
+        action: "Fix the image path or regenerate the missing source thumbnail."
+      });
+    }
 
     const report = await page.evaluate(() => window.__renderReport);
+    const renderErrors = [];
     if (report.overflowPages.length && !coverOnly) {
       const debugCards = page.locator(".page-card");
       const cardCount = await debugCards.count();
@@ -127,7 +185,11 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
         const marker = report.overflowPages.includes(index + 1) ? "OVERFLOW" : "ok";
         console.error(`  page ${index + 1} [${marker}] content ${size.used}px / limit ${size.max}px :: head: ${head} :: tail: ${tail}`);
       }
-      throw new Error(`Content overflow on rendered page(s): ${report.overflowPages.join(", ")}. Shorten the oversized block or insert a page break.`);
+      report.overflowPages.forEach((pageNumber) => renderErrors.push(diagnostic("E_PAGE_OVERFLOW", `Content overflows rendered page ${pageNumber}.`, {
+        page: pageNumber,
+        expected: "All blocks fit inside the 1080×1440 page flow",
+        action: "Shorten the oversized unbreakable block; use a page break only between complete ideas."
+      })));
     }
 
     // 正文页填充率检查（导流页与最后一页正文页由 runtime 标记豁免）。--cover-only 只出封面预览，跳过正文检查。
@@ -137,20 +199,35 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
     const sparsePages = coverOnly ? [] : (report.fillRatios || []).filter((entry) => !entry.last && entry.fill < FILL_WARNING_THRESHOLD);
     sparsePages.filter((entry) => entry.fill >= FILL_ERROR_THRESHOLD).forEach((entry) => {
       const message = `Body page ${entry.page} is only ${percent(entry.fill)} full (warns below ${percent(FILL_WARNING_THRESHOLD)}, fails below ${percent(FILL_ERROR_THRESHOLD)}). Usually an unbreakable block rounding up or an unnecessary :::pagebreak — inspect the PNG and rebalance if the page looks visibly empty.`;
-      validation.warnings.push(message);
-      process.stderr.write(`Warning: ${message}\n`);
+      const warning = diagnostic("W_PAGE_FILL_LOW", message, {
+        page: entry.page,
+        actual: percent(entry.fill),
+        expected: `At least ${percent(FILL_WARNING_THRESHOLD)}`,
+        action: "Inspect the new PNG and rebalance nearby content only if the page looks visibly empty."
+      });
+      validation.warnings.push(warning);
+      process.stderr.write(`${formatDiagnostic(warning, "Warning")}\n`);
     });
     const sparseErrors = sparsePages.filter((entry) => entry.fill < FILL_ERROR_THRESHOLD);
     if (sparseErrors.length) {
-      const detail = sparseErrors.map((entry) => `page ${entry.page} filled ${percent(entry.fill)}`).join(", ");
-      throw new Error(`Sparse body page(s): ${detail} (minimum ${percent(FILL_ERROR_THRESHOLD)}). ${FILL_ALGO_NOTE} If the sparse page is a near-empty trailing page, trim earlier content instead of appending more.`);
+      renderErrors.push(...sparseErrors.map((entry) => diagnostic("E_PAGE_FILL_LOW", `Body page ${entry.page} is below the minimum fill ratio.`, {
+        page: entry.page,
+        actual: percent(entry.fill),
+        expected: `At least ${percent(FILL_ERROR_THRESHOLD)}`,
+        action: `Re-render and inspect the current page. Rebalance nearby source-grounded content; if it is a trailing near-empty page, trim earlier content. ${FILL_ALGO_NOTE}`
+      })));
     }
 
     // 内容量下限检查（--cover-only 跳过）：正文页数 = fillRatios 条数（导流页不计入）。
     const bodyPages = (report.fillRatios || []).length;
     if (!coverOnly && bodyPages < MIN_BODY_PAGES) {
-      throw new Error(`Insufficient content: only ${bodyPages} body page(s) (${report.pageCount} total including cover and endcard); minimum is ${MIN_BODY_PAGES} body pages (${MIN_BODY_PAGES + 2} total). Go back to the source material for facts not yet used, or search the web for story material per references/narrative-style.md, then expand the Markdown and re-render.`);
+      renderErrors.push(diagnostic("E_BODY_PAGES_MIN", "The carousel does not meet the required body-page count.", {
+        actual: `${bodyPages} body page(s), ${report.pageCount} total page(s)`,
+        expected: `${MIN_BODY_PAGES} body pages, ${MIN_BODY_PAGES + 2} total pages`,
+        action: "Use unused source facts first, then add audited web research if needed; expand and re-render without padding or repetition."
+      }));
     }
+    if (renderErrors.length) throw diagnosticsError(renderErrors);
 
     const cards = page.locator(".page-card");
     const count = await cards.count();
@@ -159,7 +236,7 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
       const kind = await cards.nth(index).getAttribute("data-kind");
       if (coverOnly && kind !== "cover") continue;
       const fileName = `${String(index + 1).padStart(2, "0")}-${kind === "cover" ? "cover" : "page"}.png`;
-      await cards.nth(index).screenshot({ path: path.join(outputDirectory, fileName), type: "png" });
+      await cards.nth(index).screenshot({ path: path.join(stagingDirectory, fileName), type: "png" });
       files.push(fileName);
     }
 
@@ -175,17 +252,21 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
       fillRatios: report.fillRatios || [],
       warnings: validation.warnings
     };
-    await fs.writeFile(path.join(outputDirectory, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+    await fs.writeFile(path.join(stagingDirectory, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+    await browser.close();
+    browser = null;
+    await commitOwnedOutputs(stagingDirectory, outputDirectory);
     return manifest;
   } finally {
-    await browser.close();
+    if (browser) await browser.close();
+    await discardStagingDirectory(stagingDirectory);
   }
 }
 
 async function main() {
   const options = parseArguments(process.argv.slice(2));
   if (options.help) {
-    process.stdout.write("Usage: node render.mjs <input.md> --output <output-dir> [--theme classic|finance|editorial|tech] [--endcard guided|legacy] [--cover-only]\n");
+    process.stdout.write("Usage: node render.mjs <input.md> --output <output-dir> [--theme classic|finance|editorial|tech] [--endcard guided|legacy] [--cover-only] [--json]\n");
     return;
   }
   if (!options.input || !options.output) {
@@ -194,14 +275,23 @@ async function main() {
   const inputPath = path.resolve(options.input);
   const outputDirectory = path.resolve(options.output);
   const manifest = await render(inputPath, outputDirectory, options.theme, options.endcard, options.coverOnly);
-  process.stdout.write(`Rendered ${manifest.pages} page(s) to ${outputDirectory}\n`);
-  manifest.files.forEach((file) => process.stdout.write(`${path.join(outputDirectory, file)}\n`));
+  if (options.json) {
+    process.stdout.write(`${JSON.stringify({ ok: true, outputDirectory, manifest }, null, 2)}\n`);
+  } else {
+    process.stdout.write(`Rendered ${manifest.pages} page(s) to ${outputDirectory}\n`);
+    manifest.files.forEach((file) => process.stdout.write(`${path.join(outputDirectory, file)}\n`));
+  }
 }
 
 const entryPointPath = process.argv[1] ? await fs.realpath(path.resolve(process.argv[1])).catch(() => path.resolve(process.argv[1])) : "";
 if (fileURLToPath(import.meta.url) === entryPointPath) {
   main().catch((error) => {
-    process.stderr.write(`${error.message}\n`);
+    const diagnostics = diagnosticsFromError(error);
+    if (process.argv.includes("--json")) {
+      process.stdout.write(`${JSON.stringify({ ok: false, errors: diagnostics }, null, 2)}\n`);
+    } else {
+      diagnostics.forEach((item) => process.stderr.write(`${formatDiagnostic(item)}\n`));
+    }
     process.exitCode = 1;
   });
 }

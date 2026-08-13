@@ -59,12 +59,7 @@ def lint(filepath):
     meta, body = parse_front_matter(text)
     findings = []
 
-    # --- Rule: no "你" in body text ---
     body_no_code = strip_code_blocks(body)
-    for i, line in enumerate(body_no_code.split("\n"), start=1):
-        if "你" in line:
-            occurrences = line.count("你")
-            findings.append(f'[STYLE] body contains "你" ({occurrences}x): {line.strip()[:80]}')
 
     # --- Rule: kicker must use neutral words ---
     banned_kicker = ["解读", "深度分析", "研判", "点评"]

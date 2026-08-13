@@ -1,227 +1,171 @@
 ---
 name: carousel-image-renderer
-description: Render Chinese articles, reports, explainers, case studies, and data-backed posts into a polished multi-page PNG carousel for social platforms. Use when an agent needs to turn text or Markdown—including tables, local images, links, code, task lists, nested lists, footnotes, and rich emphasis—into coordinated 1080x1440 social cards with a title-only cover, automatic pagination, fixed branding, page numbers, and selectable classic, finance, editorial, or tech visual themes.
+description: Turn one or more local HTML, DOCX, or PDF sources on any newsworthy topic into a source-grounded Chinese financial-media carousel for 智富界. Use when an agent needs to discover local source files, extract them with Inkstone, research a verifiable market or investment relevance when needed, write for broad financial readers, and render a branded 1080×1440 multi-page PNG set with mandatory cover metadata, at least seven body pages, risk disclosure, source thumbnails, automatic pagination, and deterministic validation.
 ---
 
-# 视频图渲染器
+# 智富界轮播图
 
-产出是完成的图片集，严格保留原始素材中的事实和数据。
+把广题材信源制作成面向泛金融读者的完整图片集。事实可以来自原始材料和经过预审的联网补充；不得编造或掩盖来源之间的冲突。
 
-## 前置依赖
+## 不可降级的要求
 
-本技能依赖 **Inkstone** 提取源文档内容。步骤 1 检查依赖时会确认 Inkstone 是否已安装；若未安装，立刻停止执行，并提示用户在终端手动运行：
+- 使用本地 HTML、DOCX 或 PDF 信源；多份信源地位平等。
+- Front matter 显式提供非空 `title`，不得用正文 H1 回退。
+- 封面必须启用。
+- 正文不得出现“你”。
+- 至少包含一个非空 `:::risk`。
+- 至少渲染 7 页正文；封面和导流页另计，总页数至少 9 页。
+- 最后一个内容块必须是非空 `:::thumbnails`。
+- 验证或渲染返回非零退出码时不得交付，也不得声称产物已完成。
 
-```
+上述可机械判断的要求由脚本强制。不要只靠自查。
+
+## 外部 SKILL 契约
+
+本流程依赖两个外部 SKILL，不复述或依赖它们的内部规则编号：
+
+- **Inkstone**：Agent 把 `source-manifest.json` 中每个 `inkstoneInputs` 路径逐一交给 Inkstone。读取 Inkstone 返回的 Markdown 路径；不要假设文件名、缓存位置或复制产物。Inkstone 负责结构化提取，不负责选题、改写或缩略图。
+- **qu-ai-wei**：初稿完成后以 embedded mode 调用，只取终稿。调用时明确要求保留 front matter、Markdown 指令、表格、链接、图片路径、代码、事实和数字，并且不得引入“你”。本 SKILL 的格式与品牌约束优先。
+
+步骤 1 确认两项 SKILL 均可用。缺失时停止并提示用户手动安装：
+
+```bash
 npx skills add zzzdajb/inkstone
-```
-
-本技能依赖 **qu-ai-wei** 对改写后的简体中文做去 AI 味处理（步骤 4）。步骤 1 检查依赖时会确认 qu-ai-wei 是否已安装；若未安装，立刻停止执行，并提示用户在终端手动运行：
-
-```
 npx skills add https://github.com/LifelongLazyLearner/qu-ai-wei
 ```
 
-不允许跳过任何依赖。
-
-## 编码
-
-所有输入和输出文件使用 UTF-8 编码。在 Windows 环境下运行脚本时，确保终端编码为 UTF-8（`chcp 65001`），否则中文内容可能出现乱码。
+不得跳过依赖或用脚本冒充 SKILL 调用。
 
 ## 运行模式
 
-本技能有两种运行模式：
-
-- **HITL（默认）**：在关键节点让人做选择和判断，提高产出质量。包含两个固定检查点：角度确认（步骤 4）和封面三选一（步骤 7）。
-- **yolo**：用户请求中显式出现 "yolo"、"全自动" 等关键词时启用。yolo 模式跳过所有检查点，全自动产出。
-
-HITL 模式的提问哲学：多让人做选择或判断，但不强求。除两个固定检查点外，鼓励在遇到"能改善产出质量但自己把握不准"的问题时主动询问（例如填充率警告是否可接受、叙事断点是否自然），但不为问而问。用户显式拒绝回答某个问题时，按推荐项继续，不阻塞流程。yolo 模式下上述主动询问一律关闭。
+- **HITL（默认）**：保留角度确认和封面三选一两个检查点。用户拒绝选择时使用推荐项继续。
+- **yolo**：仅当用户显式要求“yolo”或“全自动”时启用，跳过检查点并由 Agent 选择推荐项。
 
 ## 工作流程
 
-### 1. 确认信源，检查依赖
+### 1. 检查环境并准备信源
 
-用户在要求生成轮播图之前，应提供信源文件。常见格式为 HTML、DOCX、PDF。
-
-- 如果用户已经提供了信源，确认收到并记录格式和路径。
-- 如果用户没有明确提供信源，**必须主动询问**，严禁跳过，严禁自作主张。
-
-确认当前环境已安装 Inkstone 技能（用于步骤 3 提取源文档）和 qu-ai-wei 技能（用于步骤 4 去 AI 味）后，使用Inkstone SKILL提取信源并获得结构化数据。
-
-后续所有内容以信源为准。除了叙事风格指南允许的联网搜索故事素材以外，不得引入信源之外的事实、数据或观点。
-
-### 2. 环境检查
-
-运行环境依赖检测脚本：
+所有文本文件使用 UTF-8。依次运行：
 
 ```bash
 python "<skill-dir>/scripts/preflight.py"
+node "<skill-dir>/scripts/source-prep.mjs" --workspace "<workspace>" --json
 ```
 
-脚本会检测 Node.js、Playwright 和浏览器。`[FOUND]` 表示确认存在，`[UNCERTAIN]` 表示无法确认，需要自行判断是否可以继续。需要 Node.js 和 Playwright 及 Chromium 浏览器；渲染器会在当前工作区和 SKILL 的上级工作区搜索 `playwright`。如果关键依赖缺失且无法解决，终止流程并告知用户。
+`source-prep.mjs` 是信源准备的唯一入口：
 
-### 3. 素材分析
+- 自动创建 `<workspace>/信源/`。
+- 优先扫描 `信源/`；为空时非递归扫描工作区根目录。
+- 按“同目录、同名主干”归为一个逻辑信源；不同主干视为多份信源。
+- 正文提取选择 `HTML > DOCX > PDF`。
+- 缩略图选择 `PDF > DOCX > HTML`；失败时按顺序降级并记录原因。
+- PDF 取前 4 页；DOCX 生成 4 张预览；本地 HTML 生成 2 张预览。图片固定为 1240×1754。
+- 多信源时轮流选择各组缩略图，最终 `thumbnailMarkdown` 最多放 4 张。
+- 输出 `<workspace>/视频图/source-manifest.json`，其中 `inkstoneInputs` 可直接交给 Inkstone，`thumbnailMarkdown` 可直接放进最终 Markdown。
 
-调用 Inkstone SKILL提取源文档，将产物输出到 `视频图/`。提取完成后，阅读 `source_content.md`（或 `.html`）确定以下要素：标题、副标题、数据来源、核心数据、强调要点。
+若返回 `E_SOURCE_REQUIRED`，脚本已经创建好 `信源/`；请用户放入文件后重跑。其他错误按错误对象的 `action` 修复，不要临时手搓缩略图。
 
-同时判断**信源语言**：如果信源是英文或从英文翻译而来，在后续改写中必须执行 [references/narrative-style.md](references/narrative-style.md) 中"翻译腔反模式"和"英文术语处理"章节的全部规则。英文信源的翻译腔风险远高于中文信源。
+### 2. 提取并分析全部信源
 
-准备或修改渲染器输入时，阅读 [references/content-format.md](references/content-format.md)。
+对 manifest 中每个 `inkstoneInputs` 路径分别调用 Inkstone，阅读其返回的结构化 Markdown。多份材料共同参与分析，不根据文件名擅自设定主次。
 
-选择或更改视觉主题时，阅读 [references/themes.md](references/themes.md)。
+确定：
 
-任何时候都**必须**阅读 [references/narrative-style.md](references/narrative-style.md)——它规定了所有轮播图的写作语气、数字密度、钩子结构和组件用法。
+- 原始标题、作者或机构、时间和文档类型；
+- 核心事实、数据、观点、风险和材料之间的差异；
+- 信源语言，以及是否存在翻译腔风险；
+- 与市场、行业、企业、资产价格或消费成本的直接或间接关系。
 
-### 4. 改写与编写 Markdown
+任何时候都阅读 [references/narrative-style.md](references/narrative-style.md)。准备 Markdown 时阅读 [references/content-format.md](references/content-format.md)；选择主题时阅读 [references/themes.md](references/themes.md)。
 
-#### 角度确认（HITL 检查点 1，yolo 模式跳过）
+### 3. 按需联网补充并预审
 
-改写开始前，根据素材分析产出 **3 个不同方向的角度方案**，每个方案包含：
+以下情况默认联网补充：
 
-- 拟封面三层文字（`kicker` / `title` / `subtitle`，遵循下方封面规则）；
-- 一句话卖点——这个角度打算用什么钩子抓住读者。
+- 原始材料不足以支撑 7 页正文；
+- 需要建立一条有证据的泛金融因果链；
+- 需要背景、案例、最新数据或对照观点来帮助读者理解。
 
-把 3 个方案交给用户选择，用户选定一个方向后再开始改写。用户也可以自由提出新方向，以用户输入为准。yolo 模式下跳过本检查点，由 agent 直接选择最佳方案。
+只使用高置信度来源。把候选事实、链接、支持内容和访问日期先写入 `<workspace>/视频图/web-research.md`，不得直接写入终稿。启动独立 sub-agent 做事实预审；只有通过的内容才能进入正文。
 
-#### 改写
+外部事实可以自然融入叙事，无需逐段标记来自哪份材料。外部资料与原始材料冲突时必须明确呈现差异，不得静默替换或“纠错”。找不到可靠证据时保留新闻价值，不强行制造投资结论。
 
-按照叙事风格指南改写原始素材。
+### 4. 确认角度
 
-- 每页应以读者视角的钩子开头。
-- 数字应编进叙述（而非堆在数据面板里）。
-- 整体读感应像聊天而非汇报。
-- **内容量下限**：正文至少 7 页（封面和导流页固定占 2 页，总页数至少 9 页），渲染器硬性检查，不足直接报错。动笔前先评估素材量能否撑够 7 页正文；撑不够就先补再写——优先挖信源里尚未采用的事实，或按下一条规则联网搜故事素材。不要等写完渲染报错再返工。
-- 如果某个话题适合插入一段真实故事，可联网从高置信度来源搜索。将搜到的故事素材先写入一个草稿笔记文件（不得直接写入最终 Markdown），以便审计 subagent 稍后核查。
-- 信源中出现悖论式、循环式或反直觉的修辞时，拆成**线性因果链**。不保留原文的绕圈结构，直接写清楚"先发生什么→导致什么"。例如："短缺的原因是过剩，过剩的原因是短缺"→"一旦某样东西短缺，所有人都冲进去造，最终建过头变成过剩"。
-- **英文/翻译件信源**的改写必须额外遵守叙事风格指南中的"英文术语处理"、"翻译腔反模式"和"读者知识假设"章节。写完后逐句自查是否存在英文语序、被动句式、多层定语嵌套等翻译腔痕迹。
+HITL 模式下，改写前提供 3 个真正不同的角度，每个包括：
 
-编写一份 UTF-8 Markdown 输入文件，使用 [references/content-format.md](references/content-format.md) 定义的 front matter、块级指令和行内标记。不得编造事实、数据、引用或品牌信息。
+- `kicker` / `title` / `subtitle`；
+- 一句话卖点；
+- 该角度与泛金融读者的关系。
 
-初稿完成后，调用 **qu-ai-wei** SKILL 对全文做去 AI 味处理（只输出终稿），清理套话、机械结构和过度工整的表达；qu-ai-wei 保留事实和语气，处理后不得再引入新的 AI 句式。
+等用户选择后再写。yolo 模式直接采用推荐角度。
 
-#### 手机阅读适配
+### 5. 编写并去 AI 味
 
-轮播图主要在手机上阅读，屏幕小、注意力短。
+在 `<workspace>/视频图/` 编写 UTF-8 Markdown：
 
-- **优先用表格而非图片**展示结构化数据。表格在小屏上可读性远优于缩小后的图表。
-- **尽量少插入图片**。如果必须插入，使用简单、对比度高、元素少的图，复杂图表缩到手机上根本看不清。
-- 图片不传达关键信息时，考虑用文字描述替代。
+- 事实和数字严格回指原始材料或已通过预审的联网笔记。
+- 题材不限，但必须帮助泛金融读者看懂影响链；没有可靠投资结论时不要硬给买卖建议。
+- 每个新的叙事 section 尽量用 `:::lead` 建立阅读动机；自动分页产生的续页只需语义完整。
+- 每页围绕少量核心数字展开，避免无关系的数据堆砌。
+- 所有风险内容按叙事指南使用 `:::risk`，且全文至少有一个。
+- 不使用“你”。
+- 先不加 `:::pagebreak`；只有渲染后确认存在不可接受的叙事断点时才少量使用。
+- 正文素材必须足以渲染至少 7 页，不重复、不注水。
+- 把 manifest 的 `thumbnailMarkdown` 原样放在全文最后。
 
-#### 封面
+完成初稿后调用 qu-ai-wei，并按“外部 SKILL 契约”传入覆盖条件。将返回终稿写回 Markdown。
 
-封面的目标是制造阅读动机，读者为泛金融受众，因此，必须回答三个问题：
-- 作者是谁？用大白话告诉读者作者的身份，不要假设读者了解信源来源/背景
-- 和读者有什么关系？没有直接关系就试着去拆间接关系，举个例子，非自己国家的国际冲突（没有直接关系）——油价可能和冲突有关——油价影响其他物品价格
-- 对读者可能有什么影响？没有直接影响就试着去拆间接影响，同样的，国际冲突——油价不稳定——物价上涨
+### 6. 验证格式与文风
 
-封面由三层信息组成，各司其职：
-
-- **`kicker`（左上角标签）**：承载来源和场景信息——机构名 + 时间 + 文档类型（如 `A16Z 2026LP 会议纪要`）。
-- **`title`（主标题）**：制造阅读动机，聚焦"对读者可能有什么影响"，用短句制造好奇心或紧迫感。建议带上主体名（公司/产品/人物）——主体本身就是最大钩子时（如知名公司财报、热门产品）尤其应该直接点名；title 不带主体时，subtitle 必须点名主角。
-- **`subtitle`（副标题）**：
-要求：
-  - 如果要涉及到数字，使用**具体数字**（如"超400亿美元"），禁止模糊说法（如"几百亿"）。
-  - 使用**定性词**建立可信度（如"美国顶级风投"）。
-  - 包含**人名或机构名**。
-
-三层之间尽量不要重复信息。kicker 已有的内容（如机构名、会议类型），subtitle 不再写。
-
-#### 结尾缩略图与导流页
-
-正文内容结束后，使用 `:::thumbnails` 指令插入信源缩略图。渲染器会自动生成带标题、网格布局和引导文案的缩略图页面，不需要手动排版。只需提供图片：
-
-```md
-:::thumbnails
-![](./source-page1.png)
-![](./source-page2.png)
-:::
-```
-
-**导流块固定独立成最后一页**：信源缩略图、品牌卡（含群二维码与截图指引）和免责声明共同组成一个专门的导流页，与正文分页完全解耦。写正文时不需要为导流块预留任何空间，也不要为它调整内容量或插入分页。
-
-缩略图提取规则：
-
-- **PDF / DOCX 信源**：提取前4页作为缩略图图片文件。
-- **网页信源**：截取网页关键区域的截图。
-- **无法自动获取时**：必须询问用户提供缩略图，不得跳过。
-
-放1-4张缩略图（渲染器自动居中排成一行）。推荐4张。在 front matter 中设置 `source_pages` 可以让缩略图标题显示信源总页数（如 `source_pages: 9` → "完整内容预览 共9页"）。
-
-#### 排版决策
-
-- 文章标题只出现在封面。每个正文页以自己的 section 标题或内容块开头。
-- 标题和后续解释要紧挨在一起。
-- **默认不加 `:::pagebreak`**。渲染器的自动分页会把内容排满再换页，手动分页几乎总是造成页面底部大面积空白。**渲染器会硬性检查每个正文页的填充率**（面积法：各内容块实际高度之和 ÷ 页面可用高度）：低于 70% 直接渲染失败，70–75% 会打出警告要求自查；内容自然结束的最后一页正文页和导流页豁免。每页实测值写入 `manifest.json` 的 `fillRatios`，可供复查。只在自动分页产生了不可接受的叙事断点时，才插入极少量手动分页——写完初稿后先不加任何 pagebreak 渲染一次，确认哪些断点确实需要调整，再有针对性地插入。
-- **填充率调平的正确循环**：填充率由"内容总量 ÷ 页容量的余数"和块粒度共同决定，增删任何内容都会让后续分页整体移动，不要凭旧的 `manifest.json` 猜某一页装的是什么。正确做法：渲染 → 按新的 `fillRatios` 和 PNG 确认每页实际内容 → 有针对性地增删 → 重新渲染。目标让内容总量刚好略高于整数页。如果渲染后多出一个接近空白的末尾正文页，说明总量刚越过整数页，应该反向精简前面的内容，而不是继续往后加。补内容优先用信源里尚未采用的事实，不得为凑填充率编造。
-- 段落要精炼。渲染器按语义块分页，不会拆分表格、指标组、图片、代码块或 marker。
-- 同一页不超过三种强调样式，否则显得杂乱。
-- 优先使用 Markdown 而非原始 HTML。
-
-### 5. 验证格式
+先运行硬验证：
 
 ```bash
-node "<skill-dir>/scripts/validate.mjs" <input.md>
+node "<skill-dir>/scripts/validate.mjs" <input.md> --json
 ```
 
-验证器返回非零退出码时视为真实失败。修复输入后重新验证。
+验证器一次返回全部问题。按稳定错误码、位置、期望值和 `action` 修复，直到 `valid: true`。
 
-### 6. 风格自查
+再运行机械文风检查：
 
 ```bash
 python "<skill-dir>/scripts/lint.py" <input.md>
 ```
 
-脚本检测：正文"你"字、kicker 主观词（解读/深度分析/研判/点评）、僵硬中文编号结构、每 section 数字密度、正文 H1 标题、风险内容是否在 `:::risk` 内、"信源"字样及冗余来源声明（来源署名只由封面 kicker 承载，`:::source` 不得重复）。脚本只报告发现，不做决策。根据报告修改 Markdown，修改后重新运行第5步和本步骤，直到满意为止。
+lint 结果是需要判断的警告，不等同于硬失败。处理后重新运行硬验证。
 
-### 7. 渲染
+### 7. 选择封面
 
-**封面三选一（HITL 检查点 2，yolo 模式跳过）**：正式渲染前，把检查点 1 的 3 个封面方案各渲染成一张封面图，让用户看着实际排版效果终选——文字阶段选定的方向在图上未必最好，用户可以反悔。做法：复制最终 Markdown 为 3 份临时文件，仅替换 front matter 的 `kicker` / `title` / `subtitle`，分别用 `--cover-only` 渲染到 3 个临时目录：
+HITL 模式下，把步骤 4 的三个封面方案分别写入最终 Markdown 的副本，并渲染封面预览：
 
 ```bash
 node "<skill-dir>/scripts/render.mjs" <variant.md> --output "<workspace>/视频图/cover-preview-N" --cover-only
 ```
 
-`--cover-only` 只输出 `01-cover.png`，跳过正文页的溢出与填充率检查。用户选定方案后，把选定的封面文字写回最终 Markdown 的 front matter，删除临时文件和预览目录，再执行正式渲染。yolo 模式下跳过本检查点，直接使用 agent 推荐的封面。
+让用户看图终选，再把选定文字写回最终 Markdown。yolo 模式使用推荐方案。
 
-所有产物统一输出到工作区下的 `视频图/` 目录。目录不存在时自动创建。
+### 8. 正式渲染
 
 ```bash
-mkdir -p "<workspace>/视频图"
-node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图"
+node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图" --json
 ```
 
-输出编号的 1080×1440 PNG 文件和 `manifest.json`。会根据内容自动生成所需数量的正文页，并默认添加封面（设置 `cover: false` 可跳过）。使用 `--theme classic|finance|editorial|tech` 可预览或覆盖 front matter 中的主题。渲染器返回非零退出码时视为真实失败。修复输入或运行环境；不得谎称图片已生成。
+渲染器输出编号 PNG 和 `manifest.json`，默认使用 guided 导流卡；可用 `--theme classic|finance|editorial|tech` 和 `--endcard guided|legacy` 覆盖。
 
-渲染器开始渲染前会清空输出目录里的旧产物（`cleanOwnedOutputs`），渲染一旦失败，目录里不会留下任何 PNG——一次失败会毁掉上一轮的好产物。迭代调整内容期间，先把 `--output` 指向临时目录，确认渲染成功后再正式输出到 `视频图/`。另外，不要把渲染命令接进管道（如 `| grep`、`| tail`）：管道的退出码取决于最后一个命令，渲染的非零退出码会被掩盖成"成功"。要看完整输出，或用 `PIPESTATUS` 取渲染器自身的退出码。
+正式渲染采用事务式输出：新版本完整通过检查后才替换旧 PNG 和 manifest；失败会保留上一版好产物。不要把命令接入会掩盖退出码的管道。
 
-末页是独立的导流页（缩略图 + 品牌卡 + 免责声明，整页撑满布局，群二维码 200px）。品牌卡文案有两个版本，用 `--endcard` 切换，版本会记录在 `manifest.json` 的 `endcard` 字段：
+### 9. 独立审计
 
-- `--endcard guided`（**默认**）：品牌卡内通栏一行截图指引"截图本页 → 微信扫一扫 → 从相册识别"。视频号图文里长按屏幕会触发加速播放，无法直接识别二维码，必须引导用户截图后到微信扫一扫从相册识别。
-- `--endcard legacy`：2026年8月前的旧版文案，二维码下方小字"扫码加入研报交流"，用于渲染历史版本做对照。
+启动独立 sub-agent，给它最终 Markdown、PNG、必要的结构化信源和 [references/audit-checklist.md](references/audit-checklist.md)。至少视觉检查封面、一张代表性正文页和导流页。
 
-新增导流版本时，在 `assets/endcard.js` 的 `__ENDCARD_COPY` 中增加变体文案，并在 `scripts/render.mjs` 的 `SUPPORTED_ENDCARD_VARIANTS` 中注册。页面构建脚本拆分为 `assets/cover.js`（封面）、`assets/runtime.js`（正文分页与编排）、`assets/endcard.js`（导流页），由 `render.mjs` 按此顺序注入。Node 侧脚本同样按职责拆分：`scripts/parser.mjs`（Markdown 解析与格式校验，`validate.mjs` 也用它）、`scripts/images.mjs`（本地图片 base64 嵌入）、`scripts/browser.mjs`（Playwright 与浏览器探测）、`scripts/render.mjs`（渲染编排与渲染检查）。
+若审计要求返工：
 
-### 8. 审计
+- 改正文措辞：重新执行 `qu-ai-wei → validate → lint → render`。
+- 只改 Markdown 结构：重新执行 `validate → lint → render`。
+- 只改脚本或样式：重新执行 `render → 视觉审计`。
 
-启动一个独立的 sub-agent 对最终 Markdown 和渲染后的 PNG 做审计。
+每次交付前硬验证必须全绿。
 
-**文本审计**（读 Markdown）：按 [references/narrative-style.md](references/narrative-style.md) "审计 sub-agent" 章节的基线逐项检查。
+### 10. 交付
 
-**视觉审计**（看渲染后的 PNG，至少检查封面、一张正文页和最后一页）：
-
-- 是否有页面溢出或内容被裁切？
-- 页面底部是否有不合理的大面积空白（通常是手动 pagebreak 导致）？
-- 强调样式（marker、accent、circle）渲染是否正确、与原意一致？
-- 缩略图页的图片是否正常显示？
-
-审计发现问题时，修改 Markdown 并重新渲染后再交付。仅当自动分页产生了不理想的叙事断点时，才调整内容分组或插入 `:::pagebreak`。
-
-### 9. 最终检查与交付
-
-检查第一张、一张有代表性的正文页和最后一张 PNG。确认：
-
-- 无页面溢出
-- 无块被裁切
-- 页序连贯
-- 重点强调与原意一致
-
-交付 PNG 图片集时附上输出目录路径和页数。不要交付仅用于内部排版的生成 HTML。
+最终检查首图、代表性正文页和末图，确认无裁切、溢出、错图和页序问题。交付 PNG 目录和页数；不要交付内部 HTML、封面临时目录或审计草稿。

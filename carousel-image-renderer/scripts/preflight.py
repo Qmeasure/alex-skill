@@ -70,11 +70,20 @@ def check_browser():
     return {"status": "uncertain", "message": "no system browser found; Playwright may use its managed browser if installed"}
 
 
+def check_command(name, purpose):
+    executable = shutil.which(name)
+    if executable:
+        return {"status": "found", "path": executable}
+    return {"status": "uncertain", "message": f"{name} not found in PATH; required for {purpose}"}
+
+
 def main():
     results = {
         "node": check_node(),
         "playwright": check_playwright(),
         "browser": check_browser(),
+        "pdftoppm": check_command("pdftoppm", "PDF source thumbnails"),
+        "pandoc": check_command("pandoc", "DOCX source thumbnails"),
     }
 
     all_found = all(r["status"] == "found" for r in results.values())

@@ -39,6 +39,57 @@ export async function cleanOwnedOutputs(outputDirectory) {
     .map((entry) => fs.unlink(path.join(outputDirectory, entry.name))));
 }
 
+function isOwnedOutput(name) {
+  return /^\d{2}-(?:cover|page)\.png$/.test(name) || name === "manifest.json";
+}
+
+export async function createStagingDirectory(outputDirectory) {
+  const parent = path.dirname(outputDirectory);
+  await fs.mkdir(parent, { recursive: true });
+  return fs.mkdtemp(path.join(parent, `.${path.basename(outputDirectory)}-staging-`));
+}
+
+export async function discardStagingDirectory(stagingDirectory) {
+  if (!stagingDirectory) return;
+  await fs.rm(stagingDirectory, { recursive: true, force: true });
+}
+
+export async function commitOwnedOutputs(stagingDirectory, outputDirectory) {
+  const parent = path.dirname(outputDirectory);
+  await fs.mkdir(outputDirectory, { recursive: true });
+  const stagedEntries = (await fs.readdir(stagingDirectory, { withFileTypes: true }))
+    .filter((entry) => entry.isFile() && isOwnedOutput(entry.name));
+  if (!stagedEntries.some((entry) => entry.name === "manifest.json")) {
+    throw new Error("Staged render has no manifest.json; refusing to replace the previous output.");
+  }
+
+  const backupDirectory = await fs.mkdtemp(path.join(parent, `.${path.basename(outputDirectory)}-backup-`));
+  const backedUp = [];
+  const committed = [];
+  try {
+    const oldEntries = (await fs.readdir(outputDirectory, { withFileTypes: true }))
+      .filter((entry) => entry.isFile() && isOwnedOutput(entry.name));
+    for (const entry of oldEntries) {
+      await fs.rename(path.join(outputDirectory, entry.name), path.join(backupDirectory, entry.name));
+      backedUp.push(entry.name);
+    }
+    for (const entry of stagedEntries) {
+      await fs.rename(path.join(stagingDirectory, entry.name), path.join(outputDirectory, entry.name));
+      committed.push(entry.name);
+    }
+  } catch (error) {
+    for (const name of committed.reverse()) {
+      await fs.rename(path.join(outputDirectory, name), path.join(stagingDirectory, name)).catch(() => {});
+    }
+    for (const name of backedUp.reverse()) {
+      await fs.rename(path.join(backupDirectory, name), path.join(outputDirectory, name)).catch(() => {});
+    }
+    throw error;
+  } finally {
+    await fs.rm(backupDirectory, { recursive: true, force: true });
+  }
+}
+
 export async function browserLaunchOptions() {
   const candidates = [
     process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE,

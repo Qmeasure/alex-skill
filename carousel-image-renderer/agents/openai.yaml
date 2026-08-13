@@ -1,4 +1,4 @@
 interface:
-  display_name: "图文轮播渲染"
-  short_description: "把文章排版成参考图风格的多页 PNG 轮播图"
-  default_prompt: "Use $carousel-image-renderer to turn this article into a polished multi-page image carousel."
+  display_name: "智富界轮播图"
+  short_description: "将本地多信源制作成面向泛金融读者的智富界品牌轮播图"
+  default_prompt: "Use $carousel-image-renderer to turn the local sources into a source-grounded 智富界 financial-media carousel."

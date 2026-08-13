@@ -1,242 +1,222 @@
-# Content format
+# Markdown 渲染协议
+
+本文件只定义输入格式。选题、文风、联网和合规规则见 [narrative-style.md](narrative-style.md)。
+
+## 目录
+
+- [Front matter](#front-matter)
+- [原生 Markdown](#原生-markdown)
+- [行内标记](#行内标记)
+- [块级指令](#块级指令)
 
 ## Front matter
 
-Start each input with this simple YAML-compatible front matter:
+每份输入必须以 front matter 开头：
 
 ```md
 ---
-title: GEO {circle}第二步{/circle} 到底做什么
-subtitle: 一份真实读数，解释为什么排名高却很少被提到
-kicker: GEO 数据复盘
+title: 一份公司研究
+subtitle: 两个数字，看懂成本变化
+kicker: 公司公告 2026年8月
 cover: true
-theme: classic
+theme: finance
 ---
 ```
 
-Supported fields:
+字段：
 
-- `title` — required; supports inline marks and appears on the cover only.
-- `subtitle` — optional cover subtitle.
-- `kicker` — small cover label.
-- `cover` — `true` or `false`; defaults to `true`.
-- `theme` — `classic`, `finance`, `editorial`, or `tech`; defaults to `classic`. See [themes.md](themes.md) for selection guidance.
-- `callout_label` — optional label prefix for `:::callout` panels; defaults to `AI观点`.
-- `source_pages` — optional integer; total page count of the source document. When set, the thumbnails heading shows `完整内容预览 共X页`.
+- `title`：必填，单行；只用于封面，支持行内标记。
+- `subtitle`：可选封面副标题。
+- `kicker`：可选封面标签；默认“图文报告”。
+- `cover`：必须为 `true`，省略时默认为 `true`。设为 `false` 会返回 `E_COVER_REQUIRED`。
+- `theme`：`classic`、`finance`、`editorial` 或 `tech`，默认 `classic`。
+- `callout_label`：可选，覆盖 `:::callout` 的默认“AI观点”前缀。
+- `source_pages`：可选正整数，用于导流页的“完整内容预览 共X页”。
 
-Keep each field on one line. Quote a value only when leading or trailing spaces matter.
+每个字段只占一行。`title` 缺失或为空会返回 `E_TITLE_REQUIRED`；正文 H1 不会成为封面标题。
 
-The brand footer is fixed in the template: `智富界` on the left and `看懂AI，用好AI，投资AI` on the right. Do not add brand fields to individual inputs.
+品牌页脚固定为左侧“智富界”、右侧“看懂AI，用好AI，投资AI”，不要在输入中增加品牌字段。
 
-## Native Markdown
+## 原生 Markdown
 
-Write ordinary paragraphs separated by a blank line. Consecutive non-empty lines inside one paragraph preserve their line breaks.
+段落之间留空行。同一段内连续非空行保留换行。
 
-### Headings and inline formatting
+### 标题与行内格式
+
+正文使用二至六级标题：
 
 ```md
-# 一级标题
 ## 二级标题
 ### 三级标题
-#### 四级标题
-##### 五级标题
-###### 六级标题
 
-**粗体**、__粗体__、*斜体*、_斜体_、~~删除线~~、`行内代码`
-
+**粗体**、*斜体*、~~删除线~~、`行内代码`
 [研究链接](https://example.com "可选标题")
 ```
 
-When front matter has no `title`, the first level-one heading becomes the cover title. Otherwise all headings are body headings. Links are styled for the PNG but are not clickable in the raster output.
+链接会显示样式，但 PNG 不可点击。
 
-### Lists, tasks, quotes, and rules
+### 列表、任务、引用和分隔线
 
 ```md
-- 无序列表
+- 无序项目
   - 嵌套项目
-    1. 更深一层
 
-1. 有序列表
+1. 有序项目
 2. 第二项
 
 - [x] 已完成
 - [ ] 待处理
 
-> 一段引用或旁注。
+> 引用或旁注。
 
 ---
 ```
 
-Indent nested lists with spaces. Use a blank line after the complete list.
-
-### Tables
+### 表格
 
 ```md
 | 指标 | 2025年 | 2026Q1 |
 |:---|---:|---:|
-| 营收 | 617.99亿元 | 约249亿元 |
-| 净利润 | 18.75亿元 | 247.62亿元 |
+| 营收 | 617.99亿元 | 249亿元 |
 ```
 
-Column colons control left, center, or right alignment. Prefer no more than 5 columns and 10 body rows because a table stays on one page. Use `:::metrics` instead when the content is only a label/value list.
+表格不会跨页拆分。超过 5 列或 10 行会产生警告。
 
-### Images
+### 图片
 
 ```md
 ![产线示意图](./images/fab.png "可选图片说明")
 ```
 
-Put a figure on its own line. Relative paths resolve from the input Markdown file. Local PNG, JPEG, GIF, WebP, SVG, and AVIF files are embedded before rendering; HTTP(S) image URLs are also accepted. The title is used as the caption, falling back to the alt text.
+图片必须独占一行。相对路径以输入 Markdown 所在目录为基准。支持 PNG、JPEG、GIF、WebP、SVG 和 AVIF；HTTP(S) 图片也可使用。title 优先作为图注，没有 title 时使用 alt。
 
-### Code blocks
+### 代码
 
 ````md
 ```javascript
 const revenue = 617.99;
-console.log(revenue);
 ```
 ````
 
-Backtick and tilde fences are supported. Prefer no more than 18 lines per code block.
+支持反引号和波浪线围栏。超过 18 行会产生警告。
 
-### Footnotes
+### 脚注
 
 ```md
-这是需要来源的结论。[^source]
+这是一项带注释的结论。[^source]
 
-[^source]: 数据来源：公司招股说明书。
+[^source]: 公司公告中的统计口径。
 ```
 
-Footnote definitions are collected into a compact note block at the end of the carousel.
+定义会汇总成末尾注释块。
 
-### Safe raw HTML
+### 安全 HTML
 
-Common structural and inline tags (`div`, `p`, `section`, `blockquote`, headings, lists, `strong`, `em`, `u`, `mark`, `small`, `sub`, `sup`, `kbd`, `code`, `span`, `br`) are retained with all attributes stripped. Scripts, iframes, event handlers, and other executable HTML are never executed and remain escaped text. Prefer Markdown syntax unless raw HTML is necessary.
+允许常见结构和行内标签：`div`、`p`、`section`、`blockquote`、标题、列表、`strong`、`em`、`u`、`mark`、`small`、`sub`、`sup`、`kbd`、`code`、`span`、`br`。属性会被移除；脚本、iframe 和事件处理器不会执行。优先使用 Markdown。
 
-## Inline marks
+## 行内标记
 
 ```md
 {accent}橙金色文字{/accent}
-{circle}5 次{/circle}
-{wavy}位置真不差{/wavy}
-==放一起看才有意思==
-**竞争力不行**
+{circle}关键数字{/circle}
+{wavy}手绘下划线{/wavy}
+==高亮文字==
 ```
 
-Keep each `{circle}` or `{wavy}` span short and close every mark on the same paragraph.
+每个标记在同一段内闭合。未配对会返回 `E_INLINE_MARK_UNBALANCED`。
 
-## Block directives
+## 块级指令
 
-### Section heading
+块级指令由开始行、内容和独立的 `:::` 结束行组成。
+
+### `:::section`
 
 ```md
 :::section
-三、一份真实读数：他排第 13，却几乎没被提过
+成本曲线开始变化
 :::
 ```
 
-### Metrics
-
-Use one `label | value` pair per bullet:
-
-```md
-:::metrics
-- AI 提及率 | 5%
-- 前三推荐率 | 6.47%
-- 平均排名 | 第 2.57 位
-- 赛道 736 个品牌里 | 第 13 名
-:::
-```
-
-### Marker conclusion
-
-```md
-:::marker
-「第 13 名」这个成绩，是在「已经被提到」这个小池子里算出来的。
-:::
-```
-
-### Closing callout
-
-Use this for the larger pale-yellow conclusion panel normally placed near the bottom of a page:
-
-```md
-:::callout
-先画地图，再定坐标，
-最后才轮到动笔。
-:::
-```
-
-A closing callout near the bottom of a body page is optional — use it when a closing perspective adds value, skip it when the page already ends with a strong narrative beat. Keep it to one or two short lines. The renderer prefixes the panel with a configurable label (default `AI观点：`) and keeps the whole panel on one page; do not repeat the label in the Markdown content. To change the label, set `callout_label` in front matter (e.g. `callout_label: 划重点`).
-
-### Risk callout
-
-Use this for any risk-related content. The renderer prefixes the panel with `AI提示风险：` and renders it with an orange-red accent to distinguish it from opinion callouts:
-
-```md
-:::risk
-周期见顶、出口管制收紧、流通盘解锁后抛压集中——三重风险叠加。
-:::
-```
-
-All risk mentions — whether about past events or future possibilities — must be wrapped in `:::risk`. Do not repeat the label in the Markdown content.
-
-### Lead and source
+### `:::lead`
 
 ```md
 :::lead
-先看一组容易被误读的数据。
-:::
-
-:::source
-数据来自 Geolix 只读看板，每条均可回溯到原始提问与回答。
+利润率的拐点，往往先藏在成本里。
 :::
 ```
 
-来源署名由封面 `kicker` 统一承载。`:::source` 仅用于交代正文特有的数据口径或统计方法；禁止用它写"信源：XX 独家报道""数据均来自 XX"这类重复来源的废话——渲染文本中严禁出现"信源"二字。
+### `:::metrics`
 
-### Thumbnails
+每行使用 `标签 | 值`：
 
-Use this to insert source material preview images at the end of the carousel. The renderer automatically creates a grid layout with a heading and call-to-action text. Just provide the images:
+```md
+:::metrics
+- 营收 | 249亿元
+- 净利润 | 18.75亿元
+- 毛利率 | 34%
+:::
+```
+
+### `:::marker`
+
+```md
+:::marker
+产能利用率决定新增投入能否转化为利润。
+:::
+```
+
+### `:::callout`
+
+```md
+:::callout
+估值能否维持，还要看利润兑现速度。
+:::
+```
+
+渲染器自动添加 `AI观点：`；不要在内容中重复标签。
+
+### `:::risk`
+
+```md
+:::risk
+需求回落和新增产能释放可能同时压低价格。
+:::
+```
+
+渲染器自动添加 `AI提示风险：`。每份轮播图至少需要一个非空 risk；缺失会返回 `E_RISK_REQUIRED`。
+
+### `:::source`
+
+只用于正文特有的统计口径：
+
+```md
+:::source
+这里的市场份额按出货量而非收入计算。
+:::
+```
+
+来源署名由封面 kicker 承载。不要在正文重复“整理自某机构”等填充归因，也不要出现“信源”一词。
+
+### `:::thumbnails`
 
 ```md
 :::thumbnails
-![](./source-page1.png)
-![](./source-page2.png)
+![](./信源缩略图/report/page-01.png)
+![](./信源缩略图/report/page-02.png)
 :::
 ```
 
-Images are arranged in a centered row. Use 1–4 images (2 recommended); they don't need to be legible—the purpose is to hint that more complete content is available.
+规则：
 
-### Forced page break
+- 必须非空且只能出现一次。
+- 必须是最后一个内容块。
+- 导流页最多放 4 张；使用 `source-manifest.json` 的 `thumbnailMarkdown`，不要手工选择。
+- 缩略图只承担原始资料预览和引流作用，不要求正文级可读性。
+
+### `:::pagebreak`
 
 ```md
 :::pagebreak
 ```
 
-Use this only between complete ideas. Automatic pagination is the default. The renderer enforces an area-based fill ratio on every body page (sum of block heights ÷ available height): below 70% the render fails, 70–75% emits a warning—abusing forced page breaks is the most common way to trip this check. Per-page measurements are written to `fillRatios` in `manifest.json` for review.
-
-## Complete example
-
-```md
----
-title: GEO {circle}第二步{/circle} 到底做什么
-subtitle: 排名很好，为什么 AI 还是不提你？
-kicker: GEO 数据复盘
-cover: true
----
-
-:::section
-三、一份真实读数：他排第 13，却几乎没被提过
-:::
-
-:::lead
-平均排名第 2.57 位，可 AI 提及率只有 5%。
-:::
-
-100 次相关提问里，AI 只想起过他 {circle}5 次{/circle}。他不是{accent}竞争力不行{/accent}，是{accent}出场次数太少{/accent}。
-
-:::marker
-「第 13 名」这个好看的成绩，是在「已经被提到」这个小池子里算出来的。
-:::
-```
+只在完整语义之间使用。自动分页是默认行为。正文页填充率低于 70% 会失败，70%–75% 会警告；末尾正文页和导流页豁免。
