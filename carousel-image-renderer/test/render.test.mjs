@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { buildAuditTargets } from "../scripts/render.mjs";
 
 function runNode(args, cwd) {
   return new Promise((resolve, reject) => {
@@ -17,6 +18,24 @@ function runNode(args, cwd) {
     child.on("close", (code) => resolve({ code, stdout, stderr }));
   });
 }
+
+test("audit targets identify the pages that need visual review", () => {
+  const targets = buildAuditTargets([
+    { file: "01-cover.png", kind: "cover", features: [] },
+    { file: "02-page.png", kind: "body", fill: 0.78, lastBody: false, features: ["callout"] },
+    { file: "03-page.png", kind: "body", fill: 0.92, lastBody: false, features: ["risk", "table"] },
+    { file: "04-page.png", kind: "body", fill: 0.72, lastBody: false, features: [] },
+    { file: "05-page.png", kind: "endcard", features: [] }
+  ]);
+  assert.deepEqual(targets, {
+    cover: "01-cover.png",
+    densestBody: "03-page.png",
+    riskPages: ["03-page.png"],
+    calloutPages: ["02-page.png"],
+    fillWarningPages: ["04-page.png"],
+    endcard: "05-page.png"
+  });
+});
 
 test("failed render returns a stable code and preserves previous owned output", { timeout: 60000 }, async (context) => {
   const workspace = await fs.mkdtemp(path.join(os.tmpdir(), "carousel-render-transaction-"));

@@ -72,7 +72,8 @@ test("local HTML produces two exact A4-ratio thumbnails", async (context) => {
   const sourceDirectory = path.join(workspace, "信源");
   await fs.mkdir(sourceDirectory, { recursive: true });
   await fs.writeFile(path.join(sourceDirectory, "article.html"), `<!doctype html><meta charset="utf-8"><style>body{font:32px sans-serif}section{height:1800px}</style><section>第一页</section><section>第二页</section>`, "utf8");
-  const { manifest } = await prepareSources({ workspace });
+  const { manifest, cacheHit } = await prepareSources({ workspace });
+  assert.equal(cacheHit, false);
   assert.equal(manifest.status, "ready");
   assert.match(manifest.groups[0].thumbnailSource, /article\.html$/i);
   assert.equal(manifest.groups[0].thumbnails.length, 2);
@@ -82,6 +83,9 @@ test("local HTML produces two exact A4-ratio thumbnails", async (context) => {
   for (const relative of manifest.groups[0].thumbnails) {
     await assertPngSize(path.join(workspace, relative));
   }
+  const cached = await prepareSources({ workspace });
+  assert.equal(cached.cacheHit, true);
+  assert.equal(cached.manifest.sourceFingerprint, manifest.sourceFingerprint);
 });
 
 test("same-name HTML and PDF use HTML for content and PDF for four thumbnails", { timeout: 60000 }, async (context) => {

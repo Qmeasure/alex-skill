@@ -24,6 +24,19 @@ const FILL_WARNING_THRESHOLD = 0.75;
 const MIN_BODY_PAGES = 7;
 const SUPPORTED_ENDCARD_VARIANTS = new Set(["guided", "legacy"]);
 
+export function buildAuditTargets(pageDetails) {
+  const body = pageDetails.filter((page) => page.kind === "body");
+  const densestBody = body.reduce((best, page) => !best || (page.fill ?? -1) > (best.fill ?? -1) ? page : best, null);
+  return {
+    cover: pageDetails.find((page) => page.kind === "cover")?.file || "",
+    densestBody: densestBody?.file || "",
+    riskPages: body.filter((page) => page.features.includes("risk")).map((page) => page.file),
+    calloutPages: body.filter((page) => page.features.includes("callout")).map((page) => page.file),
+    fillWarningPages: body.filter((page) => !page.lastBody && page.fill < FILL_WARNING_THRESHOLD).map((page) => page.file),
+    endcard: pageDetails.find((page) => page.kind === "endcard")?.file || ""
+  };
+}
+
 function parseArguments(argv) {
   const options = { input: "", output: "", theme: "", endcard: "", json: false };
   for (let index = 0; index < argv.length; index += 1) {
@@ -240,15 +253,48 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
       files.push(fileName);
     }
 
+    const rawPageDetails = await page.evaluate(() => [...document.querySelectorAll(".page-card")].map((card, index) => {
+      const kind = card.classList.contains("endcard-page") ? "endcard" : (card.dataset.kind || "body");
+      const labelNode = card.querySelector(".cover-title, .section-text, .subheading, .lead-block, .body-paragraph, .thumbnails-heading");
+      const features = [
+        ["risk", ".risk-block"],
+        ["callout", ".callout-block"],
+        ["table", ".markdown-table"],
+        ["image", ".markdown-image"],
+        ["metrics", ".metrics"]
+      ].filter(([, selector]) => card.querySelector(selector)).map(([name]) => name);
+      return {
+        page: index + 1,
+        kind,
+        label: (labelNode?.textContent || "").replace(/\s+/g, " ").trim().slice(0, 120),
+        features
+      };
+    }));
+    const fills = new Map((report.fillRatios || []).map((entry) => [entry.page, entry]));
+    const pageDetails = rawPageDetails
+      .filter((detail) => !coverOnly || detail.kind === "cover")
+      .map((detail) => {
+        const fill = fills.get(detail.page);
+        return {
+          ...detail,
+          file: `${String(detail.page).padStart(2, "0")}-${detail.kind === "cover" ? "cover" : "page"}.png`,
+          ...(fill ? { fill: fill.fill, lastBody: fill.last } : {})
+        };
+      });
+
     const manifest = {
       title: plainText(document.meta.title),
       theme: document.meta.theme,
       endcard,
       coverOnly,
       pages: files.length,
+      bodyPages: pageDetails.filter((detail) => detail.kind === "body").length,
+      totalPages: files.length,
       width: PAGE_WIDTH,
       height: PAGE_HEIGHT,
       files,
+      pageDetails,
+      auditTargets: buildAuditTargets(pageDetails),
       fillRatios: report.fillRatios || [],
       warnings: validation.warnings
     };

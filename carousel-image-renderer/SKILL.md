@@ -62,6 +62,7 @@ node "<skill-dir>/scripts/source-prep.mjs" --workspace "<workspace>" --json
 - PDF 取前 4 页；DOCX 生成 4 张预览；本地 HTML 生成 2 张预览。图片固定为 1240×1754。
 - 多信源时轮流选择各组缩略图，最终 `thumbnailMarkdown` 最多放 4 张。
 - 输出 `<workspace>/视频图/source-manifest.json`，其中 `inkstoneInputs` 可直接交给 Inkstone，`thumbnailMarkdown` 可直接放进最终 Markdown。
+- 信源内容和有效缩略图均未变化时复用上次结果；只有明确需要重建时才加 `--force`。
 
 若返回 `E_SOURCE_REQUIRED`，脚本已经创建好 `信源/`；请用户放入文件后重跑。其他错误按错误对象的 `action` 修复，不要临时手搓缩略图。
 
@@ -102,17 +103,7 @@ HITL 模式下，改写前提供 3 个真正不同的角度，每个包括：
 
 ### 5. 编写并去 AI 味
 
-在 `<workspace>/视频图/` 编写 UTF-8 Markdown：
-
-- 事实和数字严格回指原始材料或已通过预审的联网笔记。
-- 题材不限，但必须帮助泛金融读者看懂影响链；没有可靠投资结论时不要硬给买卖建议。
-- 每个新的叙事 section 尽量用 `:::lead` 建立阅读动机；自动分页产生的续页只需语义完整。
-- 每页围绕少量核心数字展开，避免无关系的数据堆砌。
-- 所有风险内容按叙事指南使用 `:::risk`，且全文至少有一个。
-- 不使用“你”。
-- 先不加 `:::pagebreak`；只有渲染后确认存在不可接受的叙事断点时才少量使用。
-- 正文素材必须足以渲染至少 7 页，不重复、不注水。
-- 把 manifest 的 `thumbnailMarkdown` 原样放在全文最后。
+在 `<workspace>/视频图/` 按叙事规范编写 UTF-8 Markdown，以步骤 2、3 建立的证据集为事实边界。首次渲染前不加 `:::pagebreak`；只有确认存在不可接受的叙事断点时才少量使用。把 manifest 的 `thumbnailMarkdown` 原样放在全文最后。
 
 完成初稿后调用 qu-ai-wei，并按“外部 SKILL 契约”传入覆盖条件。将返回终稿写回 Markdown。
 
@@ -156,7 +147,7 @@ node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图
 
 ### 9. 独立审计
 
-启动独立 sub-agent，给它最终 Markdown、PNG、必要的结构化信源和 [references/audit-checklist.md](references/audit-checklist.md)。至少视觉检查封面、一张代表性正文页和导流页。
+启动独立 sub-agent，给它最终 Markdown、PNG、必要的结构化信源和 [references/audit-checklist.md](references/audit-checklist.md)。优先按渲染 manifest 的 `auditTargets` 读取封面、最密正文页、risk/callout 页、低填充警告页和导流页，不再人工猜测页码。
 
 若审计要求返工：
 
@@ -168,4 +159,4 @@ node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图
 
 ### 10. 交付
 
-最终检查首图、代表性正文页和末图，确认无裁切、溢出、错图和页序问题。交付 PNG 目录和页数；不要交付内部 HTML、封面临时目录或审计草稿。
+从渲染 manifest 读取并交付 PNG 目录、`bodyPages` 和 `totalPages`；不要交付内部 HTML、封面临时目录或审计草稿。

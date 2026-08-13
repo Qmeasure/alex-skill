@@ -45,7 +45,7 @@
 
 ## 视觉检查
 
-至少查看封面、一张内容最密集的正文页、一张包含 risk/callout 的页面和最后导流页；如果 manifest 有填充率警告，也查看对应页。
+优先按渲染 manifest 的 `auditTargets` 查看封面、内容最密集正文页、risk/callout 页和最后导流页；`fillWarningPages` 非空时也查看对应页。目标缺失时再人工定位，不要猜页码。
 
 - 是否有溢出、裁切、缺图、乱码或错误字体？
 - 表格、图片、代码、marker、callout 和 risk 是否完整留在单页？
