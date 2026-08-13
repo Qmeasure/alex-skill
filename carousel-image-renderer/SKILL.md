@@ -120,10 +120,10 @@ node "<skill-dir>/scripts/validate.mjs" <input.md> --json
 再运行机械文风检查：
 
 ```bash
-python "<skill-dir>/scripts/lint.py" <input.md>
+python "<skill-dir>/scripts/lint.py" <input.md> --json
 ```
 
-lint 结果是需要判断的警告，不等同于硬失败。处理后重新运行硬验证。
+qu-ai-wei 负责生成阶段的改写，lint 再独立复检可机械识别的残留模式；提示词约束不能代替脚本检查。lint 使用稳定告警码，逐项修复或明确接受；告警本身不等同于硬失败。处理后重新运行硬验证。
 
 ### 7. 选择封面
 
