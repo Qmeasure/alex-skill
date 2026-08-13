@@ -201,17 +201,9 @@ node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图
 
 ### 8. 审计
 
-启动一个独立的 sub-agent 对最终 Markdown 和渲染后的 PNG 做叙事风格基线审计。
+启动一个独立的 sub-agent 对最终 Markdown 和渲染后的 PNG 做审计。
 
-**文本审计**（读 Markdown）：
-
-- 主体指代是否明确？抽出中间任一页单独读，能否知道在讲哪家公司/哪个人？禁止跨页依赖“这家公司”等指代；封面 title 建议带主体名，title 与 subtitle 至少有一处必须点名主角。
-- 封面是否遵循了封面相关原则，回答“作者是谁？和读者有什么关系？对读者可能有什么影响？”
-- 封面是否具有一定程度上吸引泛金融读者阅读的能力？
-- 每页是否以读者视角的钩子开头？
-- 是否使用了僵硬的编号结构（一、二、三）作为主要组织方式？
-- 整体读感是否像聊天，而非研报？
-- 如果使用了联网搜索的故事素材，中间产物文件是否存在？关键事实是否经过交叉核查？
+**文本审计**（读 Markdown）：按 [references/narrative-style.md](references/narrative-style.md) "审计 sub-agent" 章节的基线逐项检查。
 
 **视觉审计**（看渲染后的 PNG，至少检查封面、一张正文页和最后一页）：
 

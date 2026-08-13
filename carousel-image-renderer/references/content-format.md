@@ -111,14 +111,7 @@ Footnote definitions are collected into a compact note block at the end of the c
 
 ### Safe raw HTML
 
-```html
-<div class="warning">
-  <strong>保留文字排版</strong><br>
-  <mark>但移除所有属性</mark>
-</div>
-```
-
-Safe structural and inline tags such as `div`, `p`, `section`, `blockquote`, headings, lists, `strong`, `em`, `u`, `mark`, `small`, `sub`, `sup`, `kbd`, `code`, `span`, and `br` are retained. All attributes are removed. Scripts, iframes, event handlers, and other executable HTML are never executed and remain escaped text. Prefer Markdown syntax unless raw HTML is necessary.
+Common structural and inline tags (`div`, `p`, `section`, `blockquote`, headings, lists, `strong`, `em`, `u`, `mark`, `small`, `sub`, `sup`, `kbd`, `code`, `span`, `br`) are retained with all attributes stripped. Scripts, iframes, event handlers, and other executable HTML are never executed and remain escaped text. Prefer Markdown syntax unless raw HTML is necessary.
 
 ## Inline marks
 
@@ -237,26 +230,13 @@ cover: true
 三、一份真实读数：他排第 13，却几乎没被提过
 :::
 
-上个月我们把一位 TRON 能量租赁客户接进看板，第 1 份读数是这样的：
-
-:::metrics
-- AI 提及率 | 5%
-- 前三推荐率 | 6.47%
-- 平均排名 | 第 2.57 位
-- 赛道 736 个品牌里 | 第 13 名
+:::lead
+平均排名第 2.57 位，可 AI 提及率只有 5%。
 :::
 
-这 4 个数，==放一起看才有意思==。
-
-平均排名第 2.57 位，说明 AI 一旦提到他，{wavy}位置真不差{/wavy}。可 AI 提及率只有 5%——100 次相关提问里，AI 只想起过他 {circle}5 次{/circle}。
+100 次相关提问里，AI 只想起过他 {circle}5 次{/circle}。他不是{accent}竞争力不行{/accent}，是{accent}出场次数太少{/accent}。
 
 :::marker
 「第 13 名」这个好看的成绩，是在「已经被提到」这个小池子里算出来的。
-:::
-
-他不是{accent}竞争力不行{/accent}，是{accent}出场次数太少{/accent}。
-
-:::source
-数据来自 Geolix 只读看板，每一条都可回溯到原始提问与回答。我们不做数据美化，也不生成不存在的数字。
 :::
 ```
