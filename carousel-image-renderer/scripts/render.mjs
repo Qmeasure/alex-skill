@@ -13,6 +13,8 @@ const PAGE_HEIGHT = 1440;
 // 低于 FILL_ERROR_THRESHOLD 渲染失败，低于 FILL_WARNING_THRESHOLD 打警告（可能是不可拆块进位，需自查）。
 const FILL_ERROR_THRESHOLD = 0.7;
 const FILL_WARNING_THRESHOLD = 0.75;
+// 内容量下限：封面与导流页固定占用 2 页，正文少于此值（总页数 ≤ 8）视为内容量不足。
+const MIN_BODY_PAGES = 7;
 const SUPPORTED_THEMES = new Set(["classic", "finance", "editorial", "tech"]);
 const SUPPORTED_ENDCARD_VARIANTS = new Set(["guided", "legacy"]);
 
@@ -788,6 +790,12 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
     if (sparseErrors.length) {
       const detail = sparseErrors.map((entry) => `page ${entry.page} filled ${percent(entry.fill)}`).join(", ");
       throw new Error(`Sparse body page(s): ${detail} (minimum ${percent(FILL_ERROR_THRESHOLD)}). ${FILL_ALGO_NOTE} If the sparse page is a near-empty trailing page, trim earlier content instead of appending more.`);
+    }
+
+    // 内容量下限检查（--cover-only 跳过）：正文页数 = fillRatios 条数（导流页不计入）。
+    const bodyPages = (report.fillRatios || []).length;
+    if (!coverOnly && bodyPages < MIN_BODY_PAGES) {
+      throw new Error(`Insufficient content: only ${bodyPages} body page(s) (${report.pageCount} total including cover and endcard); minimum is ${MIN_BODY_PAGES} body pages (${MIN_BODY_PAGES + 2} total). Go back to the source material for facts not yet used, or search the web for story material per references/narrative-style.md, then expand the Markdown and re-render.`);
     }
 
     const cards = page.locator(".page-card");
