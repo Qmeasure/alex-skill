@@ -5,7 +5,7 @@ description: Turn one or more local HTML, DOCX, or PDF sources on any newsworthy
 
 # 智富界轮播图
 
-把广题材信源制作成面向泛金融读者的完整图片集。事实可以来自原始材料和经过预审的联网补充；不得编造或掩盖来源之间的冲突。
+把广题材信源制作成面向泛金融读者的完整图片集。事实来自本地信源和通过预审的联网资料，并保留来源之间的差异与冲突。
 
 ## 要求
 
