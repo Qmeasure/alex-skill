@@ -5,16 +5,18 @@
 // native：平台原生导流，不含二维码，引导读者关注账号并从主页继续阅读。
 // guided：卡片内通栏显示截图指引——视频号图文里长按会触发加速播放，
 // 无法直接识别二维码，只能引导用户截图后到微信扫一扫从相册识别。
+const __BRAND_INTRO = "智富界是一个聚焦AI产业、创业与投资的研究社群，帮助企业及用户看懂AI、用好AI、投资AI。";
+
 const __ENDCARD_COPY = {
   native: {
     title: "更多AI产业与投资研究",
-    intro: "智富界持续跟踪模型、算力、应用与创业，把复杂变化讲清楚。",
+    intro: __BRAND_INTRO,
     guide: "关注智富界 · 主页查看更多图文",
     showQr: false
   },
   guided: {
     title: "完整研报加入智富界交流群",
-    intro: "智富界是一个聚焦AI产业、创业与投资的研究社群，帮助企业及用户看懂AI、用好AI、投资AI。",
+    intro: __BRAND_INTRO,
     guide: "截图本页 → 微信扫一扫 → 从相册识别",
     showQr: true
   }

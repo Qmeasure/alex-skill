@@ -43,6 +43,16 @@ test("default endcard is native and does not request a QR asset", () => {
   assert.equal(qrAssetPathFor(endcard), null);
 });
 
+test("native and guided endcards preserve the same brand introduction", async () => {
+  const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+  const source = await fs.readFile(path.join(projectRoot, "assets/endcard.js"), "utf8");
+  assert.match(
+    source,
+    /const __BRAND_INTRO = "智富界是一个聚焦AI产业、创业与投资的研究社群，帮助企业及用户看懂AI、用好AI、投资AI。";/
+  );
+  assert.equal(source.match(/intro: __BRAND_INTRO/g)?.length, 2);
+});
+
 test("guided endcard requests the bundled QR asset", () => {
   const endcard = resolveEndcardVariant("guided");
   assert.equal(endcard, "guided");
