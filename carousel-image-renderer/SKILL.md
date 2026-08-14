@@ -90,6 +90,8 @@ node "<skill-dir>/scripts/source-prep.mjs" --workspace "<workspace>" --json
 
 通过预审的外部事实可以自然融入叙事，无需逐段标记来自哪份材料。联网资料只用于补充背景、案例和泛金融因果链，不用于核验或纠正本地信源。外部资料与本地信源不一致时，仍以本地信源为最高优先级；只有差异本身影响理解时，才说明口径、时间或观点差异。找不到可靠证据时保留新闻价值，不强行制造投资结论。
 
+在 `<workspace>/视频图/editorial-brief.md` 创建内部编辑摘要，只写 `主体`、`选定角度` 和 `要点`。要点只保留会进入正文或约束写作的内容，并用 `[本地]` 或 `[外部]` 标注；风险和多信源差异写进相关要点，外部资料的链接与预审详情仍留在 `web-research.md`。不要写完整信源摘要。
+
 ### 4. 确认角度
 
 HITL 模式下，改写前提供 3 个在核心问题或泛金融关系上不同的内容角度，每个包括：
@@ -100,13 +102,13 @@ HITL 模式下，改写前提供 3 个在核心问题或泛金融关系上不同
 
 标出 1 个推荐角度，并用一句话说明推荐理由。
 
-等用户选定内容角度后再写。yolo 模式直接采用推荐角度。
+用户选定内容角度后，将其写入 `editorial-brief.md` 再开始写作。yolo 模式直接采用推荐角度并写入摘要。
 
 ### 5. 编写并去 AI 味
 
 正式写作前完整阅读 [references/narrative-style.md](references/narrative-style.md) 和 [references/content-format.md](references/content-format.md)；选择主题时阅读 [references/themes.md](references/themes.md)。
 
-在 `<workspace>/视频图/` 按叙事规范编写 UTF-8 Markdown，以步骤 2、3 建立的证据集为事实边界。首次渲染前不加 `:::pagebreak`；只有确认存在不可接受的叙事断点时才少量使用。把 manifest 的 `thumbnailMarkdown` 原样放在全文最后。
+先读取 `editorial-brief.md`，再在 `<workspace>/视频图/` 按叙事规范编写 UTF-8 Markdown。摘要只用于保持主体、角度和要点一致，不替代本地信源或通过预审的外部资料。首次渲染前不加 `:::pagebreak`；只有确认存在不可接受的叙事断点时才少量使用。把 manifest 的 `thumbnailMarkdown` 原样放在全文最后。
 
 完成初稿后调用 qu-ai-wei，并按“外部 SKILL 契约”传入覆盖条件。将返回终稿写回 Markdown。
 
@@ -156,4 +158,4 @@ node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图
 
 ### 10. 交付
 
-从渲染 manifest 读取并交付 PNG 目录、`bodyPages` 和 `totalPages`；不要交付内部 HTML、封面临时目录或审计草稿。
+从渲染 manifest 读取并交付 PNG 目录、`bodyPages` 和 `totalPages`；不要交付内部 HTML、`editorial-brief.md`、封面临时目录或审计草稿。
