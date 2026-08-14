@@ -28,14 +28,14 @@ theme: finance
 - `title`：必填，单行；只用于封面，支持行内标记。
 - `subtitle`：可选封面副标题。
 - `kicker`：可选封面标签；默认“图文报告”。
-- `cover`：必须为 `true`，省略时默认为 `true`。设为 `false` 会返回 `E_COVER_REQUIRED`。
+- `cover`：设为 `true`；省略时默认为 `true`，设为 `false` 会返回 `E_COVER_REQUIRED`。
 - `theme`：`classic`、`finance`、`editorial` 或 `tech`，默认 `classic`。
 - `callout_label`：可选，覆盖 `:::callout` 的默认“AI观点”前缀。
 - `source_pages`：可选正整数，用于导流页的“完整内容预览 共X页”。
 
-每个字段只占一行。`title` 缺失或为空会返回 `E_TITLE_REQUIRED`；正文 H1 不会成为封面标题。
+每个字段只占一行。`title` 缺失或为空会返回 `E_TITLE_REQUIRED`。
 
-品牌页脚固定为左侧“智富界”、右侧“看懂AI，用好AI，投资AI”，不要在输入中增加品牌字段。
+品牌页脚由渲染器固定生成：左侧“智富界”，右侧“看懂AI，用好AI，投资AI”。
 
 ## 原生 Markdown
 
@@ -173,7 +173,7 @@ const revenue = 617.99;
 :::
 ```
 
-渲染器自动添加 `AI观点：`；不要在内容中重复标签。
+内容只写判断正文，渲染器自动添加 `AI观点：`。
 
 ### `:::risk`
 
@@ -187,7 +187,7 @@ const revenue = 617.99;
 
 ### `:::source`
 
-只用于正文特有的统计口径：
+用于正文特有的统计口径：
 
 ```md
 :::source
@@ -195,7 +195,7 @@ const revenue = 617.99;
 :::
 ```
 
-来源署名由封面 kicker 承载。不要在正文重复“整理自某机构”等填充归因，也不要出现“信源”一词。
+正文只写统计口径，来源署名由封面 kicker 承载。
 
 ### `:::thumbnails`
 
@@ -208,10 +208,9 @@ const revenue = 617.99;
 
 规则：
 
-- 必须非空且只能出现一次。
-- 必须是最后一个内容块。
-- 导流页最多放 4 张；使用 `source-manifest.json` 的 `thumbnailMarkdown`，不要手工选择。
-- 缩略图只承担原始资料预览和引流作用，不要求正文级可读性。
+- 保持非空、唯一，并作为最后一个内容块。
+- 直接使用 `source-manifest.json` 的 `thumbnailMarkdown`，其中最多包含 4 张缩略图。
+- 缩略图用于原始资料预览和引流。
 
 ### `:::pagebreak`
 
@@ -219,4 +218,4 @@ const revenue = 617.99;
 :::pagebreak
 ```
 
-只在完整语义之间使用。自动分页是默认行为。正文页填充率低于 70% 会失败，70%–75% 会警告；末尾正文页和导流页豁免。
+优先使用自动分页，在完整语义之间添加 `:::pagebreak`。正文页填充率低于 70% 会失败，70%–75% 会警告；末尾正文页和导流页豁免。
