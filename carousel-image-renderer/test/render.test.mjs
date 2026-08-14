@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { buildAuditTargets } from "../scripts/render.mjs";
+import { buildAuditTargets, qrAssetPathFor, resolveEndcardVariant } from "../scripts/render.mjs";
 
 function runNode(args, cwd) {
   return new Promise((resolve, reject) => {
@@ -35,6 +35,25 @@ test("audit targets identify the pages that need visual review", () => {
     fillWarningPages: ["04-page.png"],
     endcard: "05-page.png"
   });
+});
+
+test("default endcard is native and does not request a QR asset", () => {
+  const endcard = resolveEndcardVariant();
+  assert.equal(endcard, "native");
+  assert.equal(qrAssetPathFor(endcard), null);
+});
+
+test("guided endcard requests the bundled QR asset", () => {
+  const endcard = resolveEndcardVariant("guided");
+  assert.equal(endcard, "guided");
+  assert.match(qrAssetPathFor(endcard), /zhifujie-qr\.png$/);
+});
+
+test("legacy endcard is rejected with a stable diagnostic", () => {
+  assert.throws(
+    () => resolveEndcardVariant("legacy"),
+    (error) => error?.diagnostic?.code === "E_ENDCARD_UNSUPPORTED"
+  );
 });
 
 test("failed render returns a stable code and preserves previous owned output", { timeout: 60000 }, async (context) => {

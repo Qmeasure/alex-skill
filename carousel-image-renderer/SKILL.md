@@ -141,7 +141,7 @@ node "<skill-dir>/scripts/render.mjs" <variant.md> --output "<workspace>/视频�
 node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图" --json
 ```
 
-渲染器输出编号 PNG 和 `manifest.json`，默认使用 guided 导流卡；可用 `--theme classic|finance|editorial|tech` 和 `--endcard guided|legacy` 覆盖。
+渲染器输出编号 PNG 和 `manifest.json`，默认使用不含二维码的 native 导流卡；仅在明确需要二维码截图引导时使用 `--endcard guided`。可用 `--theme classic|finance|editorial|tech` 和 `--endcard native|guided` 覆盖。
 
 正式渲染采用事务式输出：新版本完整通过检查后才替换旧 PNG 和 manifest；失败会保留上一版好产物。不要把命令接入会掩盖退出码的管道。
 

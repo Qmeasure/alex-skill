@@ -22,7 +22,23 @@ const FILL_ERROR_THRESHOLD = 0.7;
 const FILL_WARNING_THRESHOLD = 0.75;
 // 内容量下限：封面与导流页固定占用 2 页，正文少于此值（总页数 ≤ 8）视为内容量不足。
 const MIN_BODY_PAGES = 7;
-const SUPPORTED_ENDCARD_VARIANTS = new Set(["guided", "legacy"]);
+const SUPPORTED_ENDCARD_VARIANTS = new Set(["native", "guided"]);
+
+export function resolveEndcardVariant(value = "") {
+  const endcard = String(value || "native").trim().toLowerCase();
+  if (!SUPPORTED_ENDCARD_VARIANTS.has(endcard)) {
+    throw diagnosticError("E_ENDCARD_UNSUPPORTED", `Unsupported endcard variant "${value}".`, {
+      actual: value,
+      expected: "native or guided",
+      action: "Use --endcard native or --endcard guided."
+    });
+  }
+  return endcard;
+}
+
+export function qrAssetPathFor(endcard) {
+  return endcard === "guided" ? path.join(SKILL_DIR, "assets/zhifujie-qr.png") : null;
+}
 
 export function buildAuditTargets(pageDetails) {
   const body = pageDetails.filter((page) => page.kind === "body");
@@ -86,14 +102,7 @@ function buildHtml(document, css, runtimeScripts) {
 }
 
 async function render(inputPath, outputDirectory, themeOverride = "", endcardVariant = "", coverOnly = false) {
-  const endcard = String(endcardVariant || "guided").trim().toLowerCase();
-  if (!SUPPORTED_ENDCARD_VARIANTS.has(endcard)) {
-    throw diagnosticError("E_ENDCARD_UNSUPPORTED", `Unsupported endcard variant "${endcardVariant}".`, {
-      actual: endcardVariant,
-      expected: "guided or legacy",
-      action: "Use --endcard guided or --endcard legacy."
-    });
-  }
+  const endcard = resolveEndcardVariant(endcardVariant);
   let rawSource;
   try {
     rawSource = await fs.readFile(inputPath, "utf8");
@@ -138,7 +147,7 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
       fs.readFile(path.join(SKILL_DIR, "assets/endcard.js"), "utf8"),
       fs.readFile(path.join(SKILL_DIR, "assets/runtime.js"), "utf8"),
       loadPlaywright(),
-      fs.readFile(path.join(SKILL_DIR, "assets/zhifujie-qr.png"))
+      qrAssetPathFor(endcard) ? fs.readFile(qrAssetPathFor(endcard)) : Promise.resolve(null)
     ]);
   } catch (error) {
     throw diagnosticError("E_RENDER_DEPENDENCY", "A renderer dependency or bundled asset could not be loaded.", {
@@ -147,7 +156,7 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
     });
   }
   const [css, coverScript, endcardScript, runtimeScript, playwright, qrBytes] = assets;
-  document.meta.brandQr = `data:image/png;base64,${qrBytes.toString("base64")}`;
+  if (qrBytes) document.meta.brandQr = `data:image/png;base64,${qrBytes.toString("base64")}`;
   document.meta.endcard = endcard;
 
   const stagingDirectory = await createStagingDirectory(outputDirectory);
@@ -312,7 +321,7 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
 async function main() {
   const options = parseArguments(process.argv.slice(2));
   if (options.help) {
-    process.stdout.write("Usage: node render.mjs <input.md> --output <output-dir> [--theme classic|finance|editorial|tech] [--endcard guided|legacy] [--cover-only] [--json]\n");
+    process.stdout.write("Usage: node render.mjs <input.md> --output <output-dir> [--theme classic|finance|editorial|tech] [--endcard native|guided] [--cover-only] [--json]\n");
     return;
   }
   if (!options.input || !options.output) {

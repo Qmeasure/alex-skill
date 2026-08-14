@@ -769,16 +769,25 @@ del {
   padding: 4px;
 }
 
-.brand-card-qr-label {
-  font-size: 19px;
-  color: var(--muted);
-  margin-top: 6px;
-  white-space: nowrap;
-}
-
 .brand-card-guided {
   flex-wrap: wrap;
   row-gap: 14px;
+}
+
+.brand-card-native {
+  align-items: stretch;
+  flex-direction: column;
+  gap: 18px;
+  padding: 38px 40px;
+}
+
+.brand-card-native .brand-card-title {
+  font-size: 30px;
+}
+
+.brand-card-native .brand-card-guide {
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
 }
 
 .brand-card-guide {
