@@ -77,8 +77,6 @@ node "<skill-dir>/scripts/source-prep.mjs" --workspace "<workspace>" --json
 - 信源语言，以及是否存在翻译腔风险；
 - 与市场、行业、企业、资产价格或消费成本的直接或间接关系。
 
-任何时候都阅读 [references/narrative-style.md](references/narrative-style.md)。准备 Markdown 时阅读 [references/content-format.md](references/content-format.md)；选择主题时阅读 [references/themes.md](references/themes.md)。
-
 ### 3. 按需联网补充并预审
 
 以下情况默认联网补充：
@@ -93,21 +91,29 @@ node "<skill-dir>/scripts/source-prep.mjs" --workspace "<workspace>" --json
 
 ### 4. 确认角度
 
-HITL 模式下，改写前提供 3 个真正不同的角度，每个包括：
+HITL 模式下，改写前提供 3 个在核心问题或泛金融关系上不同的内容角度，每个包括：
 
-- `kicker` / `title` / `subtitle`；
+- 一组暂定的 `kicker` / `title` / `subtitle`，用于说明角度，不作为最终封面方案；
 - 一句话卖点；
 - 该角度与泛金融读者的关系。
 
-等用户选择后再写。yolo 模式直接采用推荐角度。
+标出 1 个推荐角度，并用一句话说明推荐理由。
+
+等用户选定内容角度后再写。yolo 模式直接采用推荐角度。
 
 ### 5. 编写并去 AI 味
+
+正式写作前完整阅读 [references/narrative-style.md](references/narrative-style.md) 和 [references/content-format.md](references/content-format.md)；选择主题时阅读 [references/themes.md](references/themes.md)。
 
 在 `<workspace>/视频图/` 按叙事规范编写 UTF-8 Markdown，以步骤 2、3 建立的证据集为事实边界。首次渲染前不加 `:::pagebreak`；只有确认存在不可接受的叙事断点时才少量使用。把 manifest 的 `thumbnailMarkdown` 原样放在全文最后。
 
 完成初稿后调用 qu-ai-wei，并按“外部 SKILL 契约”传入覆盖条件。将返回终稿写回 Markdown。
 
-### 6. 验证格式与文风
+### 6. 选择封面
+
+HITL 模式下，根据选定角度和最终正文重新编写 3 组 `kicker` / `title` / `subtitle`，标出 1 组推荐方案并用一句话说明推荐理由。让用户直接按文字选择，再把选定文案写回最终 Markdown。不要把步骤 4 中未选角度的暂定文案作为封面候选。yolo 模式使用推荐方案。
+
+### 7. 验证格式与文风
 
 先运行硬验证：
 
@@ -124,16 +130,6 @@ python "<skill-dir>/scripts/lint.py" <input.md> --json
 ```
 
 qu-ai-wei 负责生成阶段的改写，lint 再独立复检可机械识别的残留模式；提示词约束不能代替脚本检查。lint 使用稳定告警码，逐项修复或明确接受；告警本身不等同于硬失败。处理后重新运行硬验证。
-
-### 7. 选择封面
-
-HITL 模式下，把步骤 4 的三个封面方案分别写入最终 Markdown 的副本，并渲染封面预览：
-
-```bash
-node "<skill-dir>/scripts/render.mjs" <variant.md> --output "<workspace>/视频图/cover-preview-N" --cover-only
-```
-
-让用户看图终选，再把选定文字写回最终 Markdown。yolo 模式使用推荐方案。
 
 ### 8. 正式渲染
 
