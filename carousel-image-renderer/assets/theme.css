@@ -785,9 +785,8 @@ del {
   font-size: 30px;
 }
 
-.brand-card-native .brand-card-intro {
-  max-width: 780px;
-  text-wrap: pretty;
+.brand-card-native .brand-card-intro-line {
+  display: block;
 }
 
 .brand-card-native .brand-card-guide {

@@ -11,6 +11,7 @@ const __ENDCARD_COPY = {
   native: {
     title: "更多AI产业与投资研究",
     intro: __BRAND_INTRO,
+    introBreakAfter: "研究社群，",
     guide: "关注视频号 · 主页查看更多内容",
     showQr: false
   },
@@ -49,7 +50,16 @@ window.__carouselEndcard = (() => {
     const brand = element("div", `brand-card brand-card-${variant}`);
     const info = element("div", "brand-card-info");
     info.appendChild(textElement("div", "brand-card-title", copy.title));
-    info.appendChild(textElement("div", "brand-card-intro", copy.intro));
+    const intro = element("div", "brand-card-intro");
+    const markerIndex = copy.introBreakAfter ? copy.intro.indexOf(copy.introBreakAfter) : -1;
+    if (markerIndex >= 0) {
+      const splitAt = markerIndex + copy.introBreakAfter.length;
+      intro.appendChild(textElement("span", "brand-card-intro-line", copy.intro.slice(0, splitAt)));
+      intro.appendChild(textElement("span", "brand-card-intro-line", copy.intro.slice(splitAt)));
+    } else {
+      intro.textContent = copy.intro;
+    }
+    info.appendChild(intro);
     brand.appendChild(info);
     if (copy.showQr && data.meta.brandQr) {
       const qr = element("div", "brand-card-qr");
