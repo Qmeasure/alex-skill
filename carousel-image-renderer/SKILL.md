@@ -23,10 +23,10 @@ description: Turn one or more local HTML, DOCX, or PDF sources on any newsworthy
 
 ## 外部 SKILL 契约
 
-本流程依赖两个外部 SKILL，不复述或依赖它们的内部规则编号：
+本流程依赖 Inkstone 和 qu-ai-wei：
 
-- **Inkstone**：Agent 把 `source-manifest.json` 中每个 `inkstoneInputs` 路径逐一交给 Inkstone。读取 Inkstone 返回的 Markdown 路径；不要假设文件名、缓存位置或复制产物。Inkstone 负责结构化提取，不负责选题、改写或缩略图。
-- **qu-ai-wei**：初稿完成后以 embedded mode 调用，只取终稿。调用时明确要求保留 front matter、Markdown 指令、表格、链接、图片路径、代码、事实和数字，并且不得引入“你”。本 SKILL 的格式与品牌约束优先。
+- **Inkstone**：把 `source-manifest.json` 中每个 `inkstoneInputs` 路径逐一交给 Inkstone，以其返回的 Markdown 路径为准。本流程负责选题、改写和缩略图。
+- **qu-ai-wei**：初稿完成后以 embedded mode 调用并使用其终稿。调用时要求保留 front matter、Markdown 指令、表格、链接、图片路径、代码、事实和数字；终稿继续遵守本 SKILL 的格式与品牌要求。
 
 步骤 1 确认两项 SKILL 均可用。缺失时停止并提示用户手动安装：
 
@@ -35,7 +35,7 @@ npx skills add zzzdajb/inkstone
 npx skills add https://github.com/LifelongLazyLearner/qu-ai-wei
 ```
 
-不得跳过依赖或用脚本冒充 SKILL 调用。
+两项依赖均通过对应 SKILL 调用。
 
 ## 运行模式
 
@@ -53,19 +53,14 @@ python "<skill-dir>/scripts/preflight.py"
 node "<skill-dir>/scripts/source-prep.mjs" --workspace "<workspace>" --json
 ```
 
-`source-prep.mjs` 是信源准备的唯一入口：
+`source-prep.mjs` 负责信源准备：
 
-- 自动创建 `<workspace>/信源/`。
-- 优先扫描 `信源/`；为空时非递归扫描工作区根目录。
-- 按“同目录、同名主干”归为一个逻辑信源；不同主干视为多份信源。
-- 正文提取选择 `HTML > DOCX > PDF`。
-- 缩略图选择 `PDF > DOCX > HTML`；失败时按顺序降级并记录原因。
-- PDF 取前 4 页；DOCX 生成 4 张预览；本地 HTML 生成 2 张预览。图片固定为 1240×1754。
-- 多信源时轮流选择各组缩略图，最终 `thumbnailMarkdown` 最多放 4 张。
-- 输出 `<workspace>/视频图/source-manifest.json`，其中 `inkstoneInputs` 可直接交给 Inkstone，`thumbnailMarkdown` 可直接放进最终 Markdown。
-- 信源内容和有效缩略图均未变化时复用上次结果；只有明确需要重建时才加 `--force`。
+- 自动创建并优先扫描 `<workspace>/信源/`；目录为空时非递归扫描工作区根目录。
+- 按“同目录、同名主干”归组；每组按 `HTML > DOCX > PDF` 选择正文，按 `PDF > DOCX > HTML` 生成缩略图。
+- 输出 `<workspace>/视频图/source-manifest.json`；其中 `inkstoneInputs` 交给 Inkstone，`thumbnailMarkdown` 放在最终 Markdown 末尾，最多包含 4 张缩略图。
+- 信源内容和有效缩略图未变化时复用上次结果；需要重建时添加 `--force`。
 
-若返回 `E_SOURCE_REQUIRED`，脚本已经创建好 `信源/`；请用户放入文件后重跑。其他错误按错误对象的 `action` 修复，不要临时手搓缩略图。
+若返回 `E_SOURCE_REQUIRED`，请用户把文件放入脚本已创建的 `信源/` 后重跑。其他错误按错误对象的 `action` 修复并重跑 `source-prep.mjs`。
 
 ### 2. 提取并分析全部信源
 
