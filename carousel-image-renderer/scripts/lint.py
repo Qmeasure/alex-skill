@@ -163,6 +163,24 @@ def lint(filepath):
                 action="Rewrite it as the specific institution, report, announcement, material, or source type.",
             ))
 
+    contextless_source = re.compile(
+        r"(?:对话|节目|访谈)(?:中|里|提到|指出|给出|拆出|援引|使用|用)"
+        r"|(?:根据|按照|来自)(?:这场|本次|上述)?(?:对话|节目|访谈)"
+    )
+    for line_number, line in enumerate(body_no_code.split("\n"), start=1):
+        stripped = line.strip()
+        if stripped.startswith(":::"):
+            continue
+        if contextless_source.search(stripped):
+            findings.append(warning(
+                "W_CONTEXTLESS_INTERVIEW_REFERENCE",
+                "Rendered copy refers to an interview or program without reader-facing context.",
+                line=absolute_line(line_number),
+                actual=stripped[:80],
+                expected="Facts and analysis stated directly unless the named speaker or medium is essential",
+                action="Remove the interview wrapper and integrate the supported fact or viewpoint into the article's own narrative.",
+            ))
+
     source_block_re = re.compile(r"^:::source\s*$\n(.*?)\n^:::$", re.MULTILINE | re.DOTALL)
     for match in source_block_re.finditer(body):
         content = " ".join(match.group(1).split())
