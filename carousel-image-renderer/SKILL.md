@@ -19,7 +19,7 @@ description: Turn one or more local HTML, DOCX, or PDF sources on any newsworthy
 - 最后一个内容块必须是非空 `:::thumbnails`。
 - 验证或渲染返回非零退出码时不得交付，也不得声称产物已完成。
 
-上述可机械判断的要求由脚本强制。不要只靠自查。
+上述可机械判断的要求以脚本结果为准。
 
 ## 外部 SKILL 契约
 
@@ -39,7 +39,7 @@ npx skills add https://github.com/LifelongLazyLearner/qu-ai-wei
 
 ## 运行模式
 
-- **HITL（默认）**：保留角度确认和封面三选一两个检查点。用户拒绝选择时使用推荐项继续。
+- **HITL（默认）**：保留角度确认和封面三选一两个检查点。用户表示无偏好时使用推荐项继续。
 - **yolo**：仅当用户显式要求“yolo”或“全自动”时启用，跳过检查点并由 Agent 选择推荐项。
 
 ## 工作流程
@@ -88,7 +88,7 @@ node "<skill-dir>/scripts/source-prep.mjs" --workspace "<workspace>" --json
 - 需要建立一条有证据的泛金融因果链；
 - 需要背景、案例、最新数据或对照观点来帮助读者理解。
 
-只使用高置信度来源。把候选事实、链接、支持内容和访问日期先写入 `<workspace>/视频图/web-research.md`，不得直接写入终稿。启动独立 sub-agent 做事实预审；只有通过的内容才能进入正文。
+只使用高置信度来源。把候选事实、链接、支持内容和访问日期先写入 `<workspace>/视频图/web-research.md`，不得直接写入终稿。启动独立 sub-agent 做事实预审，并把每条候选事实的结论和一句话理由写回同一文件，分别标记为“预审：通过/拒绝”和“理由：……”。只有标记为“通过”的内容才能进入 `editorial-brief.md` 和正文。
 
 通过预审的外部事实可以自然融入叙事，无需逐段标记来自哪份材料。联网资料只用于补充背景、案例和泛金融因果链，不用于核验或纠正本地信源。外部资料与本地信源不一致时，仍以本地信源为最高优先级；只有差异本身影响理解时，才说明口径、时间或观点差异。找不到可靠证据时保留新闻价值，不强行制造投资结论。
 
@@ -144,7 +144,7 @@ node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图
 
 渲染器输出编号 PNG 和 `manifest.json`，默认使用不含二维码的 native 导流卡；仅在明确需要二维码截图引导时使用 `--endcard guided`。可用 `--theme classic|finance|editorial|tech` 和 `--endcard native|guided` 覆盖。
 
-正式渲染采用事务式输出：新版本完整通过检查后才替换旧 PNG 和 manifest；失败会保留上一版好产物。不要把命令接入会掩盖退出码的管道。
+正式渲染采用事务式输出：新版本完整通过检查后才替换旧 PNG 和 manifest；失败会保留上一版好产物。若本次命令返回非零退出码，停在本步骤，不读取或审计目录中现有的 PNG 和 manifest；按错误对象的 `action` 修复并重新渲染。步骤 9 只使用本次成功渲染生成的 manifest。不要把命令接入会掩盖退出码的管道。
 
 ### 9. 独立审计
 
