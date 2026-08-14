@@ -7,7 +7,7 @@ description: Turn one or more local HTML, DOCX, or PDF sources on any newsworthy
 
 把广题材信源制作成面向泛金融读者的完整图片集。事实可以来自原始材料和经过预审的联网补充；不得编造或掩盖来源之间的冲突。
 
-## 不可降级的要求
+## 要求
 
 - 使用本地 HTML、DOCX 或 PDF 信源；多份信源地位平等。
 - Front matter 显式提供非空 `title`，不得用正文 H1 回退。
