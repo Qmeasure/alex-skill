@@ -64,7 +64,7 @@ node "<skill-dir>/scripts/source-prep.mjs" --workspace "<workspace>" --json
 
 ### 2. 提取并分析全部信源
 
-对 manifest 中每个 `inkstoneInputs` 路径分别调用 Inkstone，阅读其返回的结构化 Markdown。多份材料共同参与分析，不根据文件名擅自设定主次。
+对 manifest 中每个 `inkstoneInputs` 路径分别调用 Inkstone，阅读其返回的结构化 Markdown。全部材料同等参与分析。
 
 确定：
 
@@ -73,7 +73,7 @@ node "<skill-dir>/scripts/source-prep.mjs" --workspace "<workspace>" --json
 - 信源语言，以及是否存在翻译腔风险；
 - 与市场、行业、企业、资产价格或消费成本的直接或间接关系。
 
-在 `<workspace>/视频图/editorial-brief.md` 创建内部编辑摘要，只写 `主体`、`选定角度` 和 `要点`。先记录会进入正文或约束写作的 `[本地]` 要点；风险和多信源差异写进相关要点。不要写完整信源摘要。
+在 `<workspace>/视频图/editorial-brief.md` 创建内部编辑摘要，包含 `主体`、`选定角度` 和 `要点`。先记录会进入正文或约束写作的 `[本地]` 要点；风险和多信源差异写进相关要点。
 
 ### 3. 按需联网补充并预审
 
@@ -83,9 +83,9 @@ node "<skill-dir>/scripts/source-prep.mjs" --workspace "<workspace>" --json
 - 需要建立一条有证据的泛金融因果链；
 - 需要背景、案例、最新数据或对照观点来帮助读者理解。
 
-只使用高置信度来源。把候选事实、链接、支持内容和访问日期先写入 `<workspace>/视频图/web-research.md`，不得直接写入终稿。启动独立 sub-agent 做事实预审，并把每条候选事实的结论和一句话理由写回同一文件，分别标记为“预审：通过/拒绝”和“理由：……”。只有标记为“通过”的内容才能进入 `editorial-brief.md` 和正文。
+只使用高置信度来源。把候选事实、链接、支持内容和访问日期写入 `<workspace>/视频图/web-research.md`。启动独立 sub-agent 做事实预审，并把每条候选事实的结论和一句话理由写回同一文件，分别标记为“预审：通过/拒绝”和“理由：……”。把标记为“通过”且确定采用的内容写入 `editorial-brief.md` 和正文。
 
-通过预审的外部事实可以自然融入叙事，无需逐段标记来自哪份材料。联网资料只用于补充背景、案例和泛金融因果链，不用于核验或纠正本地信源。外部资料与本地信源不一致时，仍以本地信源为最高优先级；只有差异本身影响理解时，才说明口径、时间或观点差异。找不到可靠证据时保留新闻价值，不强行制造投资结论。
+通过预审的外部事实可以自然融入叙事。联网资料只补充背景、案例和泛金融因果链，本地信源仍是最终依据。差异影响理解时，说明口径、时间或观点差异。没有可靠证据时保留新闻价值。
 
 若进行了联网补充，把通过预审且确定采用的内容作为 `[外部]` 要点追加到 `editorial-brief.md`；链接与预审详情仍留在 `web-research.md`。
 
@@ -93,7 +93,7 @@ node "<skill-dir>/scripts/source-prep.mjs" --workspace "<workspace>" --json
 
 HITL 模式下，改写前提供 3 个在核心问题或泛金融关系上不同的内容角度，每个包括：
 
-- 一组暂定的 `kicker` / `title` / `subtitle`，用于说明角度，不作为最终封面方案；
+- 一组用于标识角度的暂定 `kicker` / `title` / `subtitle`；
 - 一句话卖点；
 - 该角度与泛金融读者的关系。
 
@@ -105,13 +105,13 @@ HITL 模式下，改写前提供 3 个在核心问题或泛金融关系上不同
 
 正式写作前完整阅读 [references/narrative-style.md](references/narrative-style.md) 和 [references/content-format.md](references/content-format.md)；选择主题时阅读 [references/themes.md](references/themes.md)。
 
-先读取 `editorial-brief.md`，再在 `<workspace>/视频图/` 按叙事规范编写 UTF-8 Markdown。摘要只用于保持主体、角度和要点一致，不替代本地信源或通过预审的外部资料。首次渲染前不加 `:::pagebreak`；只有确认存在不可接受的叙事断点时才少量使用。把 manifest 的 `thumbnailMarkdown` 原样放在全文最后。
+先读取 `editorial-brief.md`，再在 `<workspace>/视频图/` 按叙事规范编写 UTF-8 Markdown。以本地信源和通过预审的外部资料为事实依据，以摘要保持主体、角度和要点一致。优先使用自动分页；确认存在不可接受的叙事断点时，少量添加 `:::pagebreak`。把 manifest 的 `thumbnailMarkdown` 原样放在全文最后。
 
 完成初稿后调用 qu-ai-wei，并按“外部 SKILL 契约”传入覆盖条件。将返回终稿写回 Markdown。
 
 ### 6. 选择封面
 
-HITL 模式下，根据选定角度和最终正文重新编写 3 组 `kicker` / `title` / `subtitle`，标出 1 组推荐方案并用一句话说明推荐理由。让用户直接按文字选择，再把选定文案写回最终 Markdown。不要把步骤 4 中未选角度的暂定文案作为封面候选。yolo 模式使用推荐方案。
+HITL 模式下，根据选定角度和最终正文重新编写 3 组 `kicker` / `title` / `subtitle`，标出 1 组推荐方案并用一句话说明推荐理由。让用户直接按文字选择，再把选定文案写回最终 Markdown。yolo 模式使用推荐方案。
 
 ### 7. 验证格式与文风
 
@@ -129,7 +129,7 @@ node "<skill-dir>/scripts/validate.mjs" <input.md> --json
 python "<skill-dir>/scripts/lint.py" <input.md> --json
 ```
 
-qu-ai-wei 负责生成阶段的改写，lint 再独立复检可机械识别的残留模式；提示词约束不能代替脚本检查。lint 使用稳定告警码，逐项修复或明确接受；告警本身不等同于硬失败。处理后重新运行硬验证。
+lint 使用稳定告警码。逐项修复或明确接受告警，处理后重新运行硬验证。
 
 ### 8. 正式渲染
 
@@ -137,22 +137,22 @@ qu-ai-wei 负责生成阶段的改写，lint 再独立复检可机械识别的�
 node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图" --json
 ```
 
-渲染器输出编号 PNG 和 `manifest.json`，默认使用不含二维码的 native 导流卡；仅在明确需要二维码截图引导时使用 `--endcard guided`。可用 `--theme classic|finance|editorial|tech` 和 `--endcard native|guided` 覆盖。
+渲染器输出编号 PNG 和 `manifest.json`，默认使用 native 导流卡；需要二维码截图引导时使用 `--endcard guided`。可用 `--theme classic|finance|editorial|tech` 和 `--endcard native|guided` 覆盖。
 
-正式渲染采用事务式输出：新版本完整通过检查后才替换旧 PNG 和 manifest；失败会保留上一版好产物。若本次命令返回非零退出码，停在本步骤，不读取或审计目录中现有的 PNG 和 manifest；按错误对象的 `action` 修复并重新渲染。步骤 9 只使用本次成功渲染生成的 manifest。不要把命令接入会掩盖退出码的管道。
+渲染器以事务方式替换产物，失败时保留上一成功版本。以本次命令的退出码为准：成功后使用本次生成的 manifest 进入步骤 9；失败时按错误对象的 `action` 修复并重新渲染。确保命令保留 `render.mjs` 的原始退出码。
 
 ### 9. 独立审计
 
-启动独立 sub-agent，给它最终 Markdown、PNG、必要的结构化信源和 [references/audit-checklist.md](references/audit-checklist.md)。优先按渲染 manifest 的 `auditTargets` 读取封面、最密正文页、risk/callout 页、低填充警告页和导流页，不再人工猜测页码。
+启动独立 sub-agent，给它最终 Markdown、PNG、必要的结构化信源和 [references/audit-checklist.md](references/audit-checklist.md)。优先按渲染 manifest 的 `auditTargets` 读取封面、最密正文页、risk/callout 页、低填充警告页和导流页。
 
 若审计要求返工：
 
-- 改正文措辞：重新执行 `qu-ai-wei → validate → lint → render`。
-- 只改 Markdown 结构：重新执行 `validate → lint → render`。
-- 只改脚本或样式：重新执行 `render → 视觉审计`。
+- 正文措辞：重新执行 `qu-ai-wei → validate → lint → render`。
+- Markdown 结构：重新执行 `validate → lint → render`。
+- 脚本或样式：重新执行 `render → 视觉审计`。
 
-每次交付前硬验证必须全绿。
+交付前确认硬验证全绿。
 
 ### 10. 交付
 
-从渲染 manifest 读取并交付 PNG 目录、`bodyPages` 和 `totalPages`；不要交付内部 HTML、`editorial-brief.md`、封面临时目录或审计草稿。
+仅交付 PNG 目录以及渲染 manifest 中的 `bodyPages` 和 `totalPages`。
