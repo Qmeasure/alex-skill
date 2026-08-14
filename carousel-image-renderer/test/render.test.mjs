@@ -51,6 +51,7 @@ test("native and guided endcards preserve the same brand introduction", async ()
     /const __BRAND_INTRO = "智富界是一个聚焦AI产业、创业与投资的研究社群，帮助企业及用户看懂AI、用好AI、投资AI。";/
   );
   assert.equal(source.match(/intro: __BRAND_INTRO/g)?.length, 2);
+  assert.match(source, /guide: "关注视频号 · 主页查看更多内容"/);
 });
 
 test("guided endcard requests the bundled QR asset", () => {

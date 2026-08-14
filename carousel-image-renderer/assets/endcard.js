@@ -11,7 +11,7 @@ const __ENDCARD_COPY = {
   native: {
     title: "更多AI产业与投资研究",
     intro: __BRAND_INTRO,
-    guide: "关注智富界 · 主页查看更多图文",
+    guide: "关注视频号 · 主页查看更多内容",
     showQr: false
   },
   guided: {
