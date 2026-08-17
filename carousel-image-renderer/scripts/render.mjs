@@ -179,6 +179,7 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
       fs.readFile(path.join(SKILL_DIR, "assets/endcard.js"), "utf8"),
       fs.readFile(path.join(SKILL_DIR, "assets/runtime.js"), "utf8"),
       loadPlaywright(),
+      fs.readFile(path.join(SKILL_DIR, "assets/li-feite-avatar.png")),
       qrAssetPathFor(endcard) ? fs.readFile(qrAssetPathFor(endcard)) : Promise.resolve(null)
     ]);
   } catch (error) {
@@ -187,7 +188,8 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
       action: "Run preflight.py. Restore missing assets or install the reported dependency, then rerun render.mjs."
     });
   }
-  const [css, coverScript, endcardScript, runtimeScript, playwright, qrBytes] = assets;
+  const [css, coverScript, endcardScript, runtimeScript, playwright, authorAvatarBytes, qrBytes] = assets;
+  document.meta.authorAvatar = `data:image/png;base64,${authorAvatarBytes.toString("base64")}`;
   if (qrBytes) document.meta.brandQr = `data:image/png;base64,${qrBytes.toString("base64")}`;
   document.meta.endcard = endcard;
 

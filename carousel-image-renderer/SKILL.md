@@ -13,6 +13,7 @@ description: Turn one or more local HTML, DOCX, or PDF sources on any newsworthy
 - 本地信源为最高依据，直接采用其内容；外部资料只作补充。
 - Front matter 显式提供非空 `title`。
 - 启用封面。
+- 所有页面左上角显示内置的李菲特圆形头像与固定署名。
 - 正文禁用“你”。
 - 至少包含一个非空 `:::risk`。
 - 至少渲染 7 页正文，且总页数至少 9 页。
@@ -143,6 +144,8 @@ node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图
 渲染器输出编号 PNG 和 `manifest.json`，默认使用 `finance` 主题和 native 导流卡；需要强化 AI 技术感时使用 `--theme tech`，需要二维码截图引导时使用 `--endcard guided`。可用 `--theme finance|tech` 和 `--endcard native|guided` 覆盖。
 
 渲染器必须以 2× 生成 2160×2880 中间截图，再使用 Lanczos3 在内存中缩放为 1080×1440 PNG；不交付中间图。manifest 的 `renderScale`、`renderWidth`、`renderHeight`、`width`、`height` 和 `fonts` 必须与本次产物一致。任一必需字体加载失败时返回 `E_FONT_LOAD`，高分辨率截图或最终尺寸异常时停止交付。
+
+渲染器将内置李菲特头像嵌入自包含 HTML，并在封面、正文和导流页左上角固定显示头像与署名；不从 Markdown 读取或覆盖作者信息。
 
 渲染器以事务方式替换产物，失败时保留上一成功版本。以本次命令的退出码为准：成功后使用本次生成的 manifest 进入步骤 9；失败时按错误对象的 `action` 修复并重新渲染。确保命令保留 `render.mjs` 的原始退出码。
 

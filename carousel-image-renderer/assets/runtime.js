@@ -37,6 +37,7 @@
   const pageRecords = [];
   const BRAND_NAME = "智富界";
   const BRAND_TAGLINE = "看懂AI，用好AI，投资AI";
+  const AUTHOR_NAME = "李菲特";
 
   function element(tagName, className, html) {
     const node = document.createElement(tagName);
@@ -57,6 +58,18 @@
     return brand;
   }
 
+  function createAuthor() {
+    const author = element("div", "author-lockup");
+    const avatarFrame = element("span", "author-avatar-frame");
+    const avatar = element("img", "author-avatar");
+    avatar.src = data.meta.authorAvatar;
+    avatar.alt = `${AUTHOR_NAME}头像`;
+    avatarFrame.appendChild(avatar);
+    author.appendChild(avatarFrame);
+    author.appendChild(textElement("strong", "author-name", AUTHOR_NAME));
+    return author;
+  }
+
   function createFooter() {
     const footer = element("footer", "page-footer");
     footer.appendChild(createBrand());
@@ -68,7 +81,10 @@
   function createBodyPage() {
     const page = element("section", "page-card body-page");
     page.dataset.kind = "body";
+    const header = element("header", "page-header");
+    header.appendChild(createAuthor());
     const flow = element("main", "page-flow");
+    page.appendChild(header);
     page.appendChild(flow);
     page.appendChild(createFooter());
     root.appendChild(page);
@@ -78,7 +94,7 @@
   }
 
   // 供封面（cover.js）与末页（endcard.js）脚本使用的共享上下文。
-  const ctx = { data, root, pageRecords, element, textElement, createBrand, createBodyPage, BRAND_TAGLINE };
+  const ctx = { data, root, pageRecords, element, textElement, createBrand, createAuthor, createBodyPage, BRAND_TAGLINE };
 
   function renderList(block, nested = false) {
     const list = element(block.ordered ? "ol" : "ul", nested ? "nested-list" : "content-block list-block");

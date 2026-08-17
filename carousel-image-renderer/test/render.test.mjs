@@ -55,6 +55,18 @@ test("native and guided endcards preserve the same brand introduction", async ()
   assert.match(source, /guide: "关注视频号 · 主页查看更多内容"/);
 });
 
+test("fixed author identity uses the bundled square avatar", async () => {
+  const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+  const runtime = await fs.readFile(path.join(projectRoot, "assets/runtime.js"), "utf8");
+  const avatar = await fs.readFile(path.join(projectRoot, "assets/li-feite-avatar.png"));
+  const width = avatar.readUInt32BE(16);
+  const height = avatar.readUInt32BE(20);
+  assert.match(runtime, /const AUTHOR_NAME = "李菲特";/);
+  assert.match(runtime, /avatar\.alt = `\$\{AUTHOR_NAME\}头像`;/);
+  assert.equal(width, height);
+  assert.ok(width >= 512);
+});
+
 test("guided endcard requests the bundled QR asset", () => {
   const endcard = resolveEndcardVariant("guided");
   assert.equal(endcard, "guided");

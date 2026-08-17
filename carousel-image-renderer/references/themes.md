@@ -9,7 +9,7 @@ theme: finance
 ---
 ```
 
-Both themes use the same Markdown syntax, components, pagination, fixed footer, and page-number behavior.
+Both themes use the same Markdown syntax, components, pagination, fixed author lockup, fixed footer, and page-number behavior.
 
 ## Theme selection
 
@@ -24,6 +24,7 @@ Both themes use the same Markdown syntax, components, pagination, fixed footer, 
 - Prefer `finance` whenever investment relevance, market impact, valuation, company performance, or industry economics drives the story, including technology-company coverage.
 - Migrate legacy `classic` and `editorial` inputs to `finance`; do not preserve removed theme names.
 - Reject unknown theme names instead of silently falling back.
+- Keep the bundled 李菲特 avatar and fixed author name in the top-left of every page; theme only the outline and shadow, not the portrait.
 
 ## Typography
 
