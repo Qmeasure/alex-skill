@@ -1,4 +1,36 @@
-(() => {
+(async () => {
+  const REQUIRED_FONT_FACES = [
+    { family: "ZJF Source Han Sans SC", source: "SourceHanSansSC-Regular", weight: "400" },
+    { family: "ZJF Source Han Sans SC", source: "SourceHanSansSC-Medium", weight: "500" },
+    { family: "ZJF Source Han Sans SC", source: "SourceHanSansSC-Bold", weight: "700" },
+    { family: "ZJF Source Han Sans SC", source: "SourceHanSansSC-Heavy", weight: "900" },
+    { family: "ZJF Source Han Serif SC", source: "SourceHanSerifSC-Regular", weight: "400" },
+    { family: "ZJF Source Han Serif SC", source: "SourceHanSerifSC-SemiBold", weight: "600" },
+    { family: "ZJF Source Han Serif SC", source: "SourceHanSerifSC-Bold", weight: "700" },
+    { family: "ZJF Source Han Serif SC", source: "SourceHanSerifSC-Heavy", weight: "900" }
+  ];
+
+  const loadedFonts = [];
+  const missingFonts = [];
+  for (const required of REQUIRED_FONT_FACES) {
+    try {
+      const face = new FontFace(required.family, `local("${required.source}")`, {
+        style: "normal",
+        weight: required.weight
+      });
+      await face.load();
+      document.fonts.add(face);
+      loadedFonts.push(required.source);
+    } catch (error) {
+      missingFonts.push({ source: required.source, error: error.message });
+    }
+  }
+  window.__fontReport = { ok: missingFonts.length === 0, loadedFonts, missingFonts };
+  if (missingFonts.length) {
+    document.body.dataset.renderReady = "error";
+    return;
+  }
+
   const data = window.__CAROUSEL_DATA__;
   document.documentElement.dataset.theme = data.meta.theme || "finance";
   const root = document.getElementById("carousel");

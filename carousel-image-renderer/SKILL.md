@@ -17,6 +17,7 @@ description: Turn one or more local HTML, DOCX, or PDF sources on any newsworthy
 - 至少包含一个非空 `:::risk`。
 - 至少渲染 7 页正文，且总页数至少 9 页。
 - 以非空 `:::thumbnails` 结束全文。
+- 本机安装完整的思源黑体 SC 与思源宋体 SC 必需字重；禁止字体回退。
 - 仅在验证和渲染均成功后交付。
 
 上述可机械判断的要求以脚本结果为准。
@@ -52,6 +53,8 @@ npx skills add https://github.com/LifelongLazyLearner/qu-ai-wei
 python "<skill-dir>/scripts/preflight.py"
 node "<skill-dir>/scripts/source-prep.mjs" --workspace "<workspace>" --json
 ```
+
+预检必须确认思源黑体 SC 的 Regular、Medium、Bold、Heavy，以及思源宋体 SC 的 Regular、SemiBold、Bold、Heavy。字体缺失时停止；不使用系统替代字体继续渲染。
 
 `source-prep.mjs` 负责信源准备：
 
@@ -138,6 +141,8 @@ node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图
 ```
 
 渲染器输出编号 PNG 和 `manifest.json`，默认使用 `finance` 主题和 native 导流卡；需要强化 AI 技术感时使用 `--theme tech`，需要二维码截图引导时使用 `--endcard guided`。可用 `--theme finance|tech` 和 `--endcard native|guided` 覆盖。
+
+渲染器必须以 2× 生成 2160×2880 中间截图，再使用 Lanczos3 在内存中缩放为 1080×1440 PNG；不交付中间图。manifest 的 `renderScale`、`renderWidth`、`renderHeight`、`width`、`height` 和 `fonts` 必须与本次产物一致。任一必需字体加载失败时返回 `E_FONT_LOAD`，高分辨率截图或最终尺寸异常时停止交付。
 
 渲染器以事务方式替换产物，失败时保留上一成功版本。以本次命令的退出码为准：成功后使用本次生成的 manifest 进入步骤 9；失败时按错误对象的 `action` 修复并重新渲染。确保命令保留 `render.mjs` 的原始退出码。
 

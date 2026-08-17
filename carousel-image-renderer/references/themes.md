@@ -24,3 +24,12 @@ Both themes use the same Markdown syntax, components, pagination, fixed footer, 
 - Prefer `finance` whenever investment relevance, market impact, valuation, company performance, or industry economics drives the story, including technology-company coverage.
 - Migrate legacy `classic` and `editorial` inputs to `finance`; do not preserve removed theme names.
 - Reject unknown theme names instead of silently falling back.
+
+## Typography
+
+- Require locally installed `Source Han Sans SC` and `Source Han Serif SC`; do not declare fallback families.
+- Use Source Han Sans SC for body copy, cover subtitles, metrics, tables, callouts, risks, sources, code, and footers in both themes.
+- In `finance`, use Source Han Serif SC for the cover title, section headings, Markdown headings, and short lead blocks. This maps serif type to narrative turns and sans type to facts and analysis.
+- In `tech`, use Source Han Sans SC for both display and body roles.
+- Set body copy to 38px with 1.62 line height. Keep serif display copy short and use loaded SemiBold, Bold, or Heavy faces.
+- Treat any missing required face as a render error; never continue with browser or operating-system substitution.

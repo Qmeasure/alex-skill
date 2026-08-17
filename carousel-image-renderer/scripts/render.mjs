@@ -7,6 +7,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import sharp from "sharp";
 import { parseDocument, validateDocument, plainText } from "./parser.mjs";
 import { embedLocalMarkdownImages } from "./images.mjs";
 import { loadPlaywright, browserLaunchOptions, createStagingDirectory, discardStagingDirectory, commitOwnedOutputs } from "./browser.mjs";
@@ -16,6 +17,9 @@ const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const SKILL_DIR = path.resolve(SCRIPT_DIR, "..");
 const PAGE_WIDTH = 1080;
 const PAGE_HEIGHT = 1440;
+const RENDER_SCALE = 2;
+const RENDER_WIDTH = PAGE_WIDTH * RENDER_SCALE;
+const RENDER_HEIGHT = PAGE_HEIGHT * RENDER_SCALE;
 // 正文页填充率红线（面积法：各块实际高度之和 ÷ flow 高度）：
 // 低于 FILL_ERROR_THRESHOLD 渲染失败，低于 FILL_WARNING_THRESHOLD 打警告（可能是不可拆块进位，需自查）。
 const FILL_ERROR_THRESHOLD = 0.7;
@@ -23,6 +27,34 @@ const FILL_WARNING_THRESHOLD = 0.75;
 // 内容量下限：封面与导流页固定占用 2 页，正文少于此值（总页数 ≤ 8）视为内容量不足。
 const MIN_BODY_PAGES = 7;
 const SUPPORTED_ENDCARD_VARIANTS = new Set(["native", "guided"]);
+
+export async function downsampleScreenshot(png) {
+  const sourceWidth = png.readUInt32BE(16);
+  const sourceHeight = png.readUInt32BE(20);
+  if (sourceWidth !== RENDER_WIDTH || sourceHeight !== RENDER_HEIGHT) {
+    throw diagnosticError("E_RENDER_DIMENSIONS", "The high-resolution screenshot has unexpected dimensions.", {
+      actual: `${sourceWidth}×${sourceHeight}`,
+      expected: `${RENDER_WIDTH}×${RENDER_HEIGHT}`,
+      action: `Keep the browser viewport at ${PAGE_WIDTH}×${PAGE_HEIGHT}, deviceScaleFactor at ${RENDER_SCALE}, and screenshot scale at device.`
+    });
+  }
+  try {
+    const { data, info } = await sharp(png)
+      .resize(PAGE_WIDTH, PAGE_HEIGHT, { fit: "fill", kernel: sharp.kernel.lanczos3 })
+      .png({ compressionLevel: 9, adaptiveFiltering: true })
+      .toBuffer({ resolveWithObject: true });
+    if (info.width !== PAGE_WIDTH || info.height !== PAGE_HEIGHT) {
+      throw new Error(`Sharp returned ${info.width}×${info.height}.`);
+    }
+    return data;
+  } catch (error) {
+    throw diagnosticError("E_OUTPUT_RESIZE", "The supersampled screenshot could not be resized to the delivery dimensions.", {
+      actual: error.message,
+      expected: `${PAGE_WIDTH}×${PAGE_HEIGHT} PNG output`,
+      action: "Confirm sharp is installed and operational, then rerun render.mjs."
+    });
+  }
+}
 
 export function resolveEndcardVariant(value = "") {
   const endcard = String(value || "native").trim().toLowerCase();
@@ -172,10 +204,18 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
     }
     const page = await browser.newPage({
       viewport: { width: PAGE_WIDTH, height: PAGE_HEIGHT },
-      deviceScaleFactor: 1
+      deviceScaleFactor: RENDER_SCALE
     });
     await page.setContent(buildHtml(document, css, [coverScript, endcardScript, runtimeScript]), { waitUntil: "load" });
-    await page.waitForFunction(() => document.body.dataset.renderReady === "true");
+    await page.waitForFunction(() => ["true", "error"].includes(document.body.dataset.renderReady));
+    const fontReport = await page.evaluate(() => window.__fontReport || null);
+    if (!fontReport?.ok) {
+      throw diagnosticError("E_FONT_LOAD", "The required Source Han font faces are not installed or could not be loaded.", {
+        actual: (fontReport?.missingFonts || []).map((font) => font.source).join(", ") || "Font loader did not return a success report",
+        expected: "Source Han Sans SC and Source Han Serif SC with Regular, Medium/SemiBold, Bold, and Heavy faces",
+        action: "Install the official Source Han Sans SC and Source Han Serif SC font families, restart the browser process, and rerun render.mjs."
+      });
+    }
     await page.waitForFunction(() => [...document.images].every((image) => image.complete), null, { timeout: 15000 });
     await page.evaluate(() => document.fonts?.ready);
 
@@ -258,7 +298,9 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
       const kind = await cards.nth(index).getAttribute("data-kind");
       if (coverOnly && kind !== "cover") continue;
       const fileName = `${String(index + 1).padStart(2, "0")}-${kind === "cover" ? "cover" : "page"}.png`;
-      await cards.nth(index).screenshot({ path: path.join(stagingDirectory, fileName), type: "png" });
+      const supersampled = await cards.nth(index).screenshot({ type: "png", scale: "device" });
+      const delivered = await downsampleScreenshot(supersampled);
+      await fs.writeFile(path.join(stagingDirectory, fileName), delivered);
       files.push(fileName);
     }
 
@@ -301,6 +343,15 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
       totalPages: files.length,
       width: PAGE_WIDTH,
       height: PAGE_HEIGHT,
+      renderScale: RENDER_SCALE,
+      renderWidth: RENDER_WIDTH,
+      renderHeight: RENDER_HEIGHT,
+      resizeKernel: "lanczos3",
+      fonts: {
+        sans: "Source Han Sans SC",
+        serif: "Source Han Serif SC",
+        loadedFaces: fontReport.loadedFonts
+      },
       files,
       pageDetails,
       auditTargets: buildAuditTargets(pageDetails),

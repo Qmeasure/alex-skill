@@ -5,11 +5,22 @@ import json
 import os
 import platform
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 SKILL_DIR = SCRIPT_DIR.parent
+REQUIRED_FONT_FACES = {
+    "SourceHanSansSC-Regular",
+    "SourceHanSansSC-Medium",
+    "SourceHanSansSC-Bold",
+    "SourceHanSansSC-Heavy",
+    "SourceHanSerifSC-Regular",
+    "SourceHanSerifSC-SemiBold",
+    "SourceHanSerifSC-Bold",
+    "SourceHanSerifSC-Heavy",
+}
 
 
 def check_node():
@@ -36,6 +47,18 @@ def check_playwright():
             return {"status": "found", "path": candidate}
 
     return {"status": "uncertain", "message": "playwright not found at known locations; cannot guarantee it is available"}
+
+
+def check_sharp():
+    candidates = [
+        Path.cwd() / "node_modules" / "sharp",
+        SKILL_DIR / "node_modules" / "sharp",
+        SKILL_DIR.parent / "node_modules" / "sharp",
+    ]
+    for candidate in candidates:
+        if candidate.is_dir():
+            return {"status": "found", "path": str(candidate)}
+    return {"status": "missing", "message": "sharp not found; run npm install in the skill directory"}
 
 
 def check_browser():
@@ -70,6 +93,37 @@ def check_browser():
     return {"status": "uncertain", "message": "no system browser found; Playwright may use its managed browser if installed"}
 
 
+def check_fonts():
+    fontconfig = shutil.which("fc-list")
+    if not fontconfig:
+        return {
+            "status": "uncertain",
+            "message": "fc-list not found; render.mjs will perform the authoritative browser font check",
+        }
+    try:
+        result = subprocess.run(
+            [fontconfig, "--format", "%{postscriptname}\n"],
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+    except (OSError, subprocess.CalledProcessError) as error:
+        return {
+            "status": "uncertain",
+            "message": f"font inventory failed ({error}); render.mjs will perform the authoritative browser font check",
+        }
+    installed = {line.strip() for line in result.stdout.splitlines() if line.strip()}
+    missing = sorted(REQUIRED_FONT_FACES - installed)
+    if missing:
+        return {
+            "status": "missing",
+            "message": f"required local font faces not found: {', '.join(missing)}",
+        }
+    return {"status": "found", "faces": sorted(REQUIRED_FONT_FACES)}
+
+
 def check_command(name, purpose):
     executable = shutil.which(name)
     if executable:
@@ -81,7 +135,9 @@ def main():
     results = {
         "node": check_node(),
         "playwright": check_playwright(),
+        "sharp": check_sharp(),
         "browser": check_browser(),
+        "fonts": check_fonts(),
         "pdftoppm": check_command("pdftoppm", "PDF source thumbnails"),
         "pandoc": check_command("pandoc", "DOCX source thumbnails"),
     }
@@ -90,7 +146,10 @@ def main():
 
     for name, result in results.items():
         if result["status"] == "found":
-            print(f"[FOUND] {name}: {result['path']}")
+            detail = result.get("path") or f"{len(result.get('faces', []))} required faces"
+            print(f"[FOUND] {name}: {detail}")
+        elif result["status"] == "missing":
+            print(f"[MISSING] {name}: {result['message']}")
         else:
             print(f"[UNCERTAIN] {name}: {result['message']}")
 
@@ -99,7 +158,7 @@ def main():
     else:
         print("\nSome dependencies could not be confirmed. This does not mean they are missing.")
 
-    sys.exit(0)
+    sys.exit(1 if any(r["status"] == "missing" for r in results.values()) else 0)
 
 
 if __name__ == "__main__":

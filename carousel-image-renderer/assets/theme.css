@@ -41,12 +41,16 @@
   --cover-footer: #6f7c90;
   --cover-glow-a: rgba(43, 83, 126, 0.14);
   --cover-glow-b: rgba(186, 141, 50, 0.13);
-  --font-sans: "PingFang SC", "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
-  --font-display: var(--font-sans);
+  --font-sans: "ZJF Source Han Sans SC";
+  --font-serif: "ZJF Source Han Serif SC";
+  --font-display: var(--font-serif);
+  --body-font-size: 38px;
+  --body-line-height: 1.62;
   --title-underline: linear-gradient(90deg, #ba8d32 0%, #315f91 72%, transparent 100%);
 }
 
 html[data-theme="tech"] {
+  --font-display: var(--font-sans);
   --paper: #0d1622;
   --paper-top: #121e2c;
   --ink: #e4edf7;
@@ -97,6 +101,7 @@ html, body {
   padding: 0;
   background: #e9e8e2;
   font-family: var(--font-sans);
+  font-synthesis: none;
   -webkit-font-smoothing: antialiased;
   text-rendering: geometricPrecision;
 }
@@ -128,9 +133,9 @@ html, body {
   min-height: 0;
   overflow: hidden;
   color: var(--body-ink);
-  font-size: 34px;
+  font-size: var(--body-font-size);
   font-weight: 450;
-  line-height: 1.68;
+  line-height: var(--body-line-height);
   letter-spacing: 0.15px;
 }
 
@@ -161,7 +166,7 @@ del {
   background: var(--soft-accent);
   border: 1px solid var(--accent-border);
   border-radius: 7px;
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-family: var(--font-sans);
   font-size: 0.82em;
 }
 
@@ -242,7 +247,7 @@ del {
   align-items: start;
   gap: 14px;
   margin-bottom: 28px;
-  font-size: 38px;
+  font-size: 44px;
   line-height: 1.42;
 }
 
@@ -265,7 +270,7 @@ del {
 
 .reading-info {
   color: var(--muted);
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 450;
   letter-spacing: 0.5px;
   padding-bottom: 16px;
@@ -275,7 +280,8 @@ del {
 
 .lead-block {
   color: var(--soft-ink);
-  font-size: 36px;
+  font-family: var(--font-display);
+  font-size: 40px;
   font-weight: 650;
 }
 
@@ -283,17 +289,17 @@ del {
   margin-top: 8px;
   color: var(--heading-ink);
   font-family: var(--font-display);
-  font-size: 39px;
+  font-size: 42px;
   font-weight: 900;
   line-height: 1.42;
 }
 
-.heading-level-3 { font-size: 35px; }
-.heading-level-4 { font-size: 32px; }
+.heading-level-3 { font-size: 40px; }
+.heading-level-4 { font-size: 38px; }
 .heading-level-5,
 .heading-level-6 {
   color: var(--subtle-ink);
-  font-size: 29px;
+  font-size: 34px;
 }
 
 .metrics {
@@ -323,7 +329,7 @@ del {
 
 .metric-value {
   color: var(--gold-dark);
-  font-size: 42px;
+  font-size: 44px;
   font-weight: 900;
   white-space: nowrap;
 }
@@ -347,7 +353,7 @@ del {
   color: var(--heading-ink);
   background: linear-gradient(90deg, var(--callout-start) 0%, var(--callout-end) 100%);
   border-left: 7px solid var(--gold);
-  font-size: 35px;
+  font-size: 38px;
   font-weight: 900;
   line-height: 1.48;
   letter-spacing: 0.3px;
@@ -433,8 +439,8 @@ del {
   padding: 11px 20px 9px;
   color: var(--code-accent);
   background: var(--code-head);
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: 20px;
+  font-family: var(--font-sans);
+  font-size: 22px;
   font-weight: 700;
   letter-spacing: 0.6px;
   text-transform: uppercase;
@@ -446,8 +452,8 @@ del {
   color: var(--code-ink);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: 23px;
+  font-family: var(--font-sans);
+  font-size: 25px;
   font-weight: 500;
   line-height: 1.52;
 }
@@ -472,7 +478,7 @@ del {
 .markdown-image figcaption {
   margin-top: 12px;
   color: var(--muted);
-  font-size: 23px;
+  font-size: 25px;
   font-weight: 520;
   line-height: 1.48;
   text-align: center;
@@ -488,7 +494,7 @@ del {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  font-size: 25px;
+  font-size: 27px;
   line-height: 1.38;
 }
 
@@ -517,7 +523,7 @@ del {
   padding-top: 18px;
   color: var(--muted);
   border-top: 2px solid var(--soft-rule);
-  font-size: 23px;
+  font-size: 25px;
   font-weight: 500;
   line-height: 1.52;
 }
@@ -544,7 +550,7 @@ del {
 
 .source-block {
   color: var(--muted);
-  font-size: 25px;
+  font-size: 27px;
   font-weight: 500;
   line-height: 1.58;
 }
@@ -590,7 +596,7 @@ del {
   border-left: 5px solid rgba(210, 90, 50, 0.7);
   border-radius: 4px 14px 14px 4px;
   padding: 26px 32px;
-  font-size: 29px;
+  font-size: 32px;
   line-height: 1.62;
 }
 
@@ -780,7 +786,7 @@ del {
   color: var(--strong-ink);
   font-family: var(--font-display);
   font-size: 82px;
-  font-weight: 950;
+  font-weight: 900;
   line-height: 1.22;
   letter-spacing: -3px;
 }
@@ -840,7 +846,7 @@ html[data-theme="finance"] .block-section {
 
 html[data-theme="finance"] .section-diamond {
   width: 7px;
-  height: 48px;
+  height: 54px;
   margin-top: 3px;
   transform: none;
 }

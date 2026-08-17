@@ -99,3 +99,42 @@ title: 事务输出测试
   assert.equal(await fs.readFile(path.join(outputDirectory, "01-cover.png"), "utf8"), "previous-image");
   assert.deepEqual(JSON.parse(await fs.readFile(path.join(outputDirectory, "manifest.json"), "utf8")), { previous: true });
 });
+
+test("cover render loads required fonts and downsamples 2x output to delivery size", { timeout: 60000 }, async (context) => {
+  const workspace = await fs.mkdtemp(path.join(os.tmpdir(), "carousel-render-contract-"));
+  context.after(() => fs.rm(workspace, { recursive: true, force: true }));
+  const inputPath = path.join(workspace, "input.md");
+  const outputDirectory = path.join(workspace, "视频图");
+  await fs.writeFile(inputPath, `---
+title: AI投资叙事
+subtitle: 用清晰的字体层级讲明白产业变化
+kicker: 字体与清晰度测试
+---
+
+正文用于满足格式要求。
+
+:::risk
+样例内容不构成投资建议。
+:::
+
+:::thumbnails
+![](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAEAQH/XPWsWQAAAABJRU5ErkJggg==)
+:::
+`, "utf8");
+
+  const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+  const result = await runNode(["scripts/render.mjs", inputPath, "--output", outputDirectory, "--cover-only", "--json"], projectRoot);
+  assert.equal(result.code, 0, result.stderr || result.stdout);
+  const response = JSON.parse(result.stdout);
+  assert.equal(response.manifest.renderScale, 2);
+  assert.deepEqual(
+    [response.manifest.renderWidth, response.manifest.renderHeight, response.manifest.width, response.manifest.height],
+    [2160, 2880, 1080, 1440]
+  );
+  assert.equal(response.manifest.fonts.sans, "Source Han Sans SC");
+  assert.equal(response.manifest.fonts.serif, "Source Han Serif SC");
+  assert.equal(response.manifest.fonts.loadedFaces.length, 8);
+
+  const png = await fs.readFile(path.join(outputDirectory, "01-cover.png"));
+  assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [1080, 1440]);
+});
