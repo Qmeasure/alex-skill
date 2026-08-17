@@ -592,17 +592,35 @@ export function validateDocument(document) {
     if (block.type === "footnotes") return block.items.map((item) => plainText(item.raw)).join(" ");
     return "";
   };
+  const forbiddenBodyTerms = [
+    {
+      term: "你",
+      code: "E_BODY_SECOND_PERSON",
+      message: "Body copy must not use the second-person character “你”.",
+      expected: "Objective wording with the subject omitted or named explicitly",
+      action: "Rewrite the sentence without second-person or generic audience substitutions."
+    },
+    {
+      term: "本文",
+      code: "E_BODY_META_REFERENCE",
+      message: "Body copy must not refer to itself with “本文”.",
+      expected: "Direct narration of the subject, evidence, or conclusion",
+      action: "Name the event or subject directly, or remove the meta-reference."
+    }
+  ];
   document.blocks.forEach((block) => {
     const prose = proseForBlock(block);
-    const occurrences = (prose.match(/你/g) || []).length;
-    if (occurrences) {
-      addError("E_BODY_SECOND_PERSON", "Body copy must not use the second-person character “你”.", {
-        line: block.line,
-        actual: `你 × ${occurrences}`,
-        expected: "Objective wording with the subject omitted or named explicitly",
-        action: "Rewrite the sentence without second-person or generic audience substitutions."
-      });
-    }
+    forbiddenBodyTerms.forEach(({ term, code, message, expected, action }) => {
+      const occurrences = prose.split(term).length - 1;
+      if (occurrences) {
+        addError(code, message, {
+          line: block.line,
+          actual: `${term} × ${occurrences}`,
+          expected,
+          action
+        });
+      }
+    });
   });
   document.blocks.forEach((block, index) => {
     if (block.type === "paragraph" && plainText(block.raw).length > 700) {

@@ -1,6 +1,6 @@
 ---
 name: carousel-image-renderer
-description: Turn one or more local HTML, DOCX, or PDF sources on any newsworthy topic into a source-grounded Chinese financial-media carousel for 智富界. Use when an agent needs to discover local source files, extract them with Inkstone, research a verifiable market or investment relevance when needed, write for broad financial readers, and render a branded 1080×1440 multi-page PNG set with mandatory cover metadata, at least seven body pages, risk disclosure, source thumbnails, automatic pagination, and deterministic validation.
+description: Turn one or more local HTML, DOCX, or PDF sources on any newsworthy topic into a source-grounded Chinese financial-media carousel for 智富界, mapping strongly relevant coverage into its 3×4 methodology. Use when an agent needs to discover local source files, extract them with Inkstone, research a verifiable market or investment relevance when needed, write for broad financial readers, and render a branded 1080×1440 multi-page PNG set with mandatory cover metadata, at least seven body pages, risk disclosure, source thumbnails, automatic pagination, and deterministic validation.
 ---
 
 # 智富界轮播图
@@ -11,10 +11,11 @@ description: Turn one or more local HTML, DOCX, or PDF sources on any newsworthy
 
 - 使用本地 HTML、DOCX 或 PDF 信源；多份信源地位平等。
 - 本地信源为最高依据，直接采用其内容；外部资料只作补充。
+- 所有文章内部判断与 3×4 方法论的关系；只有证据支持的强相关内容才在正文显式映射。
 - Front matter 显式提供非空 `title`。
 - 启用封面。
 - 所有页面左上角显示内置的李菲特圆形头像与固定署名。
-- 正文禁用“你”。
+- 正文禁用“你”和“本文”。
 - 至少包含一个非空 `:::risk`。
 - 至少渲染 7 页正文，且总页数至少 9 页。
 - 以非空 `:::thumbnails` 结束全文。
@@ -43,6 +44,10 @@ npx skills add https://github.com/LifelongLazyLearner/qu-ai-wei
 
 - **HITL（默认）**：保留角度确认和封面三选一两个检查点。用户表示无偏好时使用推荐项继续。
 - **yolo**：仅当用户显式要求“yolo”或“全自动”时启用，跳过检查点并由 Agent 选择推荐项。
+
+## 3×4 方法论
+
+分析和写作前完整阅读 [references/3x4-methodology.md](references/3x4-methodology.md)。不要把 `3×4` 的四种商业模式与四种个人入场方式混为一谈，不补齐未经确认的十二种商业模式，不为弱相关内容强贴方法论标签。
 
 ## 工作流程
 
@@ -76,8 +81,9 @@ node "<skill-dir>/scripts/source-prep.mjs" --workspace "<workspace>" --json
 - 核心事实、数据、观点、风险和材料之间的差异；
 - 信源语言，以及是否存在翻译腔风险；
 - 与市场、行业、企业、资产价格或消费成本的直接或间接关系。
+- 与 3×4 的关系：颠覆场景、商业模式或产业环节、资金或资源传导、主要入场方式和最容易产生的误判；证据不足时记录“不显式映射”及理由。
 
-在 `<workspace>/视频图/editorial-brief.md` 创建内部编辑摘要，包含 `主体`、`选定角度` 和 `要点`。先记录会进入正文或约束写作的 `[本地]` 要点；风险和多信源差异写进相关要点。
+在 `<workspace>/视频图/editorial-brief.md` 创建内部编辑摘要，包含 `主体`、`选定角度`、`3×4 映射` 和 `要点`。先记录会进入正文或约束写作的 `[本地]` 要点；风险和多信源差异写进相关要点。`3×4 映射` 写明是否显式呈现；显式呈现时记录五项映射答案和证据，内部判断时只记录不呈现的理由。
 
 ### 3. 按需联网补充并预审
 
@@ -86,6 +92,7 @@ node "<skill-dir>/scripts/source-prep.mjs" --workspace "<workspace>" --json
 - 原始材料不足以支撑 7 页正文；
 - 需要建立一条有证据的泛金融因果链；
 - 需要背景、案例、最新数据或对照观点来帮助读者理解。
+- 强相关内容缺少资金、订单、采购、流量或资源传导证据，无法可靠完成 3×4 映射。
 
 只使用高置信度来源。把候选事实、链接、支持内容和访问日期写入 `<workspace>/视频图/web-research.md`。启动独立 sub-agent 做事实预审，并把每条候选事实的结论和一句话理由写回同一文件，分别标记为“预审：通过/拒绝”和“理由：……”。把标记为“通过”且确定采用的内容写入 `editorial-brief.md` 和正文。
 
@@ -107,9 +114,13 @@ HITL 模式下，改写前提供 3 个在核心问题或泛金融关系上不同
 
 ### 5. 编写并去 AI 味
 
-正式写作前完整阅读 [references/narrative-style.md](references/narrative-style.md) 和 [references/content-format.md](references/content-format.md)；选择主题时阅读 [references/themes.md](references/themes.md)。
+正式写作前完整阅读 [references/narrative-style.md](references/narrative-style.md)、[references/content-format.md](references/content-format.md) 和 [references/3x4-methodology.md](references/3x4-methodology.md)；选择主题时阅读 [references/themes.md](references/themes.md)。
 
-先读取 `editorial-brief.md`，再在 `<workspace>/视频图/` 按叙事规范编写 UTF-8 Markdown。以本地信源和通过预审的外部资料为事实依据，以摘要保持主体、角度和要点一致。优先使用自动分页；确认存在不可接受的叙事断点时，少量添加 `:::pagebreak`。把 manifest 的 `thumbnailMarkdown` 原样放在全文最后。
+先读取 `editorial-brief.md`，再在 `<workspace>/视频图/` 按叙事规范编写 UTF-8 Markdown。以本地信源和通过预审的外部资料为事实依据，以摘要保持主体、角度和要点一致。
+
+若摘要判定为强相关，在事实和因果链成立之后、估值判断或行动结论之前加入一页显式映射。首次显式提到 3×4 时，先用一两句说明“抓颠覆，抢复利”的目的，点明 AI 基建、生成式大模型、AI 硬件三个场景、每个场景四种商业模式，以及另行选择的四种个人入场方式；不假设读者了解内部框架。随后说明场景、商业模式或产业环节、资金或资源传导、主要对应的一种入场方式和最容易产生的误判。使用现有 Markdown 和指令表达，不新增方法论专用指令；不在封面或每页角标重复口号。若摘要判定不显式呈现，正文不提 3×4。
+
+优先使用自动分页；确认存在不可接受的叙事断点时，少量添加 `:::pagebreak`。把 manifest 的 `thumbnailMarkdown` 原样放在全文最后。
 
 完成初稿后调用 qu-ai-wei，并按“外部 SKILL 契约”传入覆盖条件。将返回终稿写回 Markdown。
 
@@ -160,6 +171,8 @@ debug 模式把完整 PNG 和 manifest 写入正式目录的同级 `<workspace>/
 ### 9. 独立审计
 
 启动独立 sub-agent，给它最终 Markdown、PNG、必要的结构化信源和 [references/audit-checklist.md](references/audit-checklist.md)。优先按渲染 manifest 的 `auditTargets` 读取封面、最密正文页、risk/callout 页、低填充警告页和导流页。
+
+若正文显式映射 3×4，同时审计映射是否有材料支撑、是否只突出一种入场方式、是否把间接受益误写成直接订单或代理关系，以及高收益语言是否被写成结果保证。
 
 若审计要求返工：
 

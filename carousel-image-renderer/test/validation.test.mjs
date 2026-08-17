@@ -139,6 +139,54 @@ title: 明确标题
   assert.equal(errors.length, 2);
 });
 
+test("body meta-reference checks reject 本文 but skip code and thumbnail paths", () => {
+  const source = `---
+title: 明确标题
+---
+
+本文解释行业变化。
+
+\`\`\`text
+本文
+\`\`\`
+
+![](./本文.png)
+
+:::risk
+存在波动风险。
+:::
+
+:::thumbnails
+![](./本文.png)
+:::
+`;
+  const errors = validateDocument(parseDocument(source)).errors.filter((item) => item.code === "E_BODY_META_REFERENCE");
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0].line, 5);
+});
+
+test("body meta-reference checks include rendered image captions and nested lists", () => {
+  const source = `---
+title: 明确标题
+---
+
+![本文数据](./chart.png)
+
+- 第一层
+  - 本文结论
+
+:::risk
+存在波动风险。
+:::
+
+:::thumbnails
+![](./page.png)
+:::
+`;
+  const errors = validateDocument(parseDocument(source)).errors.filter((item) => item.code === "E_BODY_META_REFERENCE");
+  assert.equal(errors.length, 2);
+});
+
 test("more than four endcard thumbnails fail with a dedicated code", () => {
   const images = [1, 2, 3, 4, 5].map((number) => `![](./page-${number}.png)`).join("\n");
   const source = `---
