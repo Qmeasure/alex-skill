@@ -85,8 +85,35 @@ export function buildAuditTargets(pageDetails) {
   };
 }
 
+export function debugOutputDirectoryFor(outputDirectory) {
+  return `${path.resolve(outputDirectory)}.debug`;
+}
+
+export function buildDebugTargets(pageDetails, diagnostics) {
+  const pagesByNumber = new Map(pageDetails.map((page) => [page.page, page.file]));
+  const pagesFor = (code) => [...new Set(diagnostics
+    .filter((item) => item.code === code && item.page != null)
+    .map((item) => item.page))]
+    .sort((left, right) => left - right)
+    .map((pageNumber) => pagesByNumber.get(pageNumber))
+    .filter(Boolean);
+  const failingPageNumbers = new Set(diagnostics
+    .filter((item) => item.page != null)
+    .map((item) => item.page));
+  const adjacentPageNumbers = new Set();
+  for (const pageNumber of failingPageNumbers) {
+    if (pagesByNumber.has(pageNumber - 1) && !failingPageNumbers.has(pageNumber - 1)) adjacentPageNumbers.add(pageNumber - 1);
+    if (pagesByNumber.has(pageNumber + 1) && !failingPageNumbers.has(pageNumber + 1)) adjacentPageNumbers.add(pageNumber + 1);
+  }
+  return {
+    fillErrorPages: pagesFor("E_PAGE_FILL_LOW"),
+    overflowPages: pagesFor("E_PAGE_OVERFLOW"),
+    adjacentPages: [...adjacentPageNumbers].sort((left, right) => left - right).map((pageNumber) => pagesByNumber.get(pageNumber))
+  };
+}
+
 function parseArguments(argv) {
-  const options = { input: "", output: "", theme: "", endcard: "", json: false };
+  const options = { input: "", output: "", theme: "", endcard: "", json: false, debug: false };
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index];
     if (value === "--output" || value === "-o") {
@@ -100,6 +127,8 @@ function parseArguments(argv) {
       index += 1;
     } else if (value === "--cover-only") {
       options.coverOnly = true;
+    } else if (value === "--debug") {
+      options.debug = true;
     } else if (value === "--json") {
       options.json = true;
     } else if (value === "--help" || value === "-h") {
@@ -133,8 +162,13 @@ function buildHtml(document, css, runtimeScripts) {
 </html>`;
 }
 
-async function render(inputPath, outputDirectory, themeOverride = "", endcardVariant = "", coverOnly = false) {
+async function render(inputPath, outputDirectory, themeOverride = "", endcardVariant = "", coverOnly = false, debug = false) {
   const endcard = resolveEndcardVariant(endcardVariant);
+  const renderedOutputDirectory = debug ? debugOutputDirectoryFor(outputDirectory) : outputDirectory;
+  const debugOutputDirectory = debugOutputDirectoryFor(outputDirectory);
+  const debugAction = debug
+    ? `Inspect the diagnostic PNGs in "${renderedOutputDirectory}", including the failing page and adjacent pages.`
+    : `Run the same render command with --debug; diagnostic PNGs will be written to "${debugOutputDirectory}" without replacing formal output.`;
   let rawSource;
   try {
     rawSource = await fs.readFile(inputPath, "utf8");
@@ -193,7 +227,7 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
   if (qrBytes) document.meta.brandQr = `data:image/png;base64,${qrBytes.toString("base64")}`;
   document.meta.endcard = endcard;
 
-  const stagingDirectory = await createStagingDirectory(outputDirectory);
+  const stagingDirectory = await createStagingDirectory(renderedOutputDirectory);
   let browser;
   try {
     try {
@@ -252,7 +286,7 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
       report.overflowPages.forEach((pageNumber) => renderErrors.push(diagnostic("E_PAGE_OVERFLOW", `Content overflows rendered page ${pageNumber}.`, {
         page: pageNumber,
         expected: "All blocks fit inside the 1080×1440 page flow",
-        action: "Shorten the oversized unbreakable block; use a page break only between complete ideas."
+        action: `Shorten the oversized unbreakable block; use a page break only between complete ideas. ${debugAction}`
       })));
     }
 
@@ -278,7 +312,7 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
         page: entry.page,
         actual: percent(entry.fill),
         expected: `At least ${percent(FILL_ERROR_THRESHOLD)}`,
-        action: `Re-render and inspect the current page. Rebalance nearby source-grounded content; if it is a trailing near-empty page, trim earlier content. ${FILL_ALGO_NOTE}`
+        action: `Rebalance nearby source-grounded content; if it is a trailing near-empty page, trim earlier content. ${debugAction} ${FILL_ALGO_NOTE}`
       })));
     }
 
@@ -288,10 +322,10 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
       renderErrors.push(diagnostic("E_BODY_PAGES_MIN", "The carousel does not meet the required body-page count.", {
         actual: `${bodyPages} body page(s), ${report.pageCount} total page(s)`,
         expected: `${MIN_BODY_PAGES} body pages, ${MIN_BODY_PAGES + 2} total pages`,
-        action: "Use unused source facts first, then add audited web research if needed; expand and re-render without padding or repetition."
+        action: `Use unused source facts first, then add audited web research if needed; expand and re-render without padding or repetition. ${debugAction}`
       }));
     }
-    if (renderErrors.length) throw diagnosticsError(renderErrors);
+    if (renderErrors.length && !debug) throw diagnosticsError(renderErrors);
 
     const cards = page.locator(".page-card");
     const count = await cards.count();
@@ -340,6 +374,8 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
       theme: document.meta.theme,
       endcard,
       coverOnly,
+      mode: debug ? "debug" : "formal",
+      deliveryReady: !debug && !coverOnly,
       pages: files.length,
       bodyPages: pageDetails.filter((detail) => detail.kind === "body").length,
       totalPages: files.length,
@@ -357,13 +393,15 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
       files,
       pageDetails,
       auditTargets: buildAuditTargets(pageDetails),
+      ...(debug ? { debugTargets: buildDebugTargets(pageDetails, renderErrors) } : {}),
       fillRatios: report.fillRatios || [],
-      warnings: validation.warnings
+      warnings: validation.warnings,
+      blockingDiagnostics: debug ? renderErrors : []
     };
     await fs.writeFile(path.join(stagingDirectory, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
     await browser.close();
     browser = null;
-    await commitOwnedOutputs(stagingDirectory, outputDirectory);
+    await commitOwnedOutputs(stagingDirectory, renderedOutputDirectory);
     return manifest;
   } finally {
     if (browser) await browser.close();
@@ -374,7 +412,7 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
 async function main() {
   const options = parseArguments(process.argv.slice(2));
   if (options.help) {
-    process.stdout.write("Usage: node render.mjs <input.md> --output <output-dir> [--theme finance|tech] [--endcard native|guided] [--cover-only] [--json]\n");
+    process.stdout.write("Usage: node render.mjs <input.md> --output <output-dir> [--theme finance|tech] [--endcard native|guided] [--cover-only] [--debug] [--json]\n");
     return;
   }
   if (!options.input || !options.output) {
@@ -382,12 +420,14 @@ async function main() {
   }
   const inputPath = path.resolve(options.input);
   const outputDirectory = path.resolve(options.output);
-  const manifest = await render(inputPath, outputDirectory, options.theme, options.endcard, options.coverOnly);
+  const renderedOutputDirectory = options.debug ? debugOutputDirectoryFor(outputDirectory) : outputDirectory;
+  const manifest = await render(inputPath, outputDirectory, options.theme, options.endcard, options.coverOnly, options.debug);
   if (options.json) {
-    process.stdout.write(`${JSON.stringify({ ok: true, outputDirectory, manifest }, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify({ ok: true, outputDirectory: renderedOutputDirectory, manifest }, null, 2)}\n`);
   } else {
-    process.stdout.write(`Rendered ${manifest.pages} page(s) to ${outputDirectory}\n`);
-    manifest.files.forEach((file) => process.stdout.write(`${path.join(outputDirectory, file)}\n`));
+    const label = options.debug ? "debug page(s)" : "page(s)";
+    process.stdout.write(`Rendered ${manifest.pages} ${label} to ${renderedOutputDirectory}\n`);
+    manifest.files.forEach((file) => process.stdout.write(`${path.join(renderedOutputDirectory, file)}\n`));
   }
 }
 

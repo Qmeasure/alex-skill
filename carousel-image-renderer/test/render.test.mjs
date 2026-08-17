@@ -80,7 +80,7 @@ test("legacy endcard is rejected with a stable diagnostic", () => {
   );
 });
 
-test("failed render returns a stable code and preserves previous owned output", { timeout: 60000 }, async (context) => {
+test("debug render exposes blocking layout pages without replacing formal output", { timeout: 60000 }, async (context) => {
   const workspace = await fs.mkdtemp(path.join(os.tmpdir(), "carousel-render-transaction-"));
   context.after(() => fs.rm(workspace, { recursive: true, force: true }));
   const inputPath = path.join(workspace, "input.md");
@@ -92,7 +92,31 @@ test("failed render returns a stable code and preserves previous owned output", 
 title: 事务输出测试
 ---
 
-正文只有一页，因此正式渲染必须失败。
+第一页内容很短。
+
+:::pagebreak
+
+第二页内容很短。
+
+:::pagebreak
+
+第三页内容很短。
+
+:::pagebreak
+
+第四页内容很短。
+
+:::pagebreak
+
+第五页内容很短。
+
+:::pagebreak
+
+第六页内容很短。
+
+:::pagebreak
+
+第七页是自然结束的末页。
 
 :::risk
 样本过短，结论可能失真。
@@ -107,7 +131,21 @@ title: 事务输出测试
   const result = await runNode(["scripts/render.mjs", inputPath, "--output", outputDirectory, "--json"], projectRoot);
   assert.equal(result.code, 1, result.stderr || result.stdout);
   const response = JSON.parse(result.stdout);
-  assert.equal(response.errors[0].code, "E_BODY_PAGES_MIN");
+  assert.equal(response.errors[0].code, "E_PAGE_FILL_LOW");
+  assert.match(response.errors[0].action, /--debug/);
+  assert.equal(await fs.readFile(path.join(outputDirectory, "01-cover.png"), "utf8"), "previous-image");
+  assert.deepEqual(JSON.parse(await fs.readFile(path.join(outputDirectory, "manifest.json"), "utf8")), { previous: true });
+
+  const debugResult = await runNode(["scripts/render.mjs", inputPath, "--output", outputDirectory, "--debug", "--json"], projectRoot);
+  assert.equal(debugResult.code, 0, debugResult.stderr || debugResult.stdout);
+  const debugResponse = JSON.parse(debugResult.stdout);
+  const debugDirectory = `${outputDirectory}.debug`;
+  assert.equal(debugResponse.outputDirectory, debugDirectory);
+  assert.equal(debugResponse.manifest.mode, "debug");
+  assert.equal(debugResponse.manifest.deliveryReady, false);
+  assert.ok(debugResponse.manifest.blockingDiagnostics.some((item) => item.code === "E_PAGE_FILL_LOW"));
+  assert.ok(debugResponse.manifest.debugTargets.fillErrorPages.length > 0);
+  await fs.access(path.join(debugDirectory, debugResponse.manifest.debugTargets.fillErrorPages[0]));
   assert.equal(await fs.readFile(path.join(outputDirectory, "01-cover.png"), "utf8"), "previous-image");
   assert.deepEqual(JSON.parse(await fs.readFile(path.join(outputDirectory, "manifest.json"), "utf8")), { previous: true });
 });

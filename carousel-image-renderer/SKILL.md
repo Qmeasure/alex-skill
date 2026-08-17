@@ -149,6 +149,14 @@ node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图
 
 渲染器以事务方式替换产物，失败时保留上一成功版本。以本次命令的退出码为准：成功后使用本次生成的 manifest 进入步骤 9；失败时按错误对象的 `action` 修复并重新渲染。确保命令保留 `render.mjs` 的原始退出码。
 
+若正式渲染因 `E_PAGE_FILL_LOW`、`E_PAGE_OVERFLOW` 或 `E_BODY_PAGES_MIN` 失败，按错误提示使用相同参数追加 `--debug`：
+
+```bash
+node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图" --debug --json
+```
+
+debug 模式把完整 PNG 和 manifest 写入正式目录的同级 `<workspace>/视频图.debug/`，不覆盖正式产物；它只放宽上述三项可截图的布局门槛，其他错误仍然失败。debug 命令退出码为 0 只表示诊断图生成成功，manifest 始终包含 `mode: "debug"`、`deliveryReady: false`、`blockingDiagnostics` 和 `debugTargets`。先查看失败页及 `adjacentPages`，再修改 Markdown 并重新执行正式渲染。禁止审计或交付 debug 产物；正式渲染成功后删除该临时目录。
+
 ### 9. 独立审计
 
 启动独立 sub-agent，给它最终 Markdown、PNG、必要的结构化信源和 [references/audit-checklist.md](references/audit-checklist.md)。优先按渲染 manifest 的 `auditTargets` 读取封面、最密正文页、risk/callout 页、低填充警告页和导流页。
