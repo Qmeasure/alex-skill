@@ -9,19 +9,18 @@ theme: finance
 ---
 ```
 
-All themes use the same Markdown syntax, components, pagination, fixed footer, and page-number behavior.
+Both themes use the same Markdown syntax, components, pagination, fixed footer, and page-number behavior.
 
 ## Theme selection
 
-- `classic` — Warm ivory, gold marker accents, and hand-drawn details. Use by default, for general explainers, case studies, GEO/AI education, and existing carousels that must retain the established identity.
-- `finance` — Cool paper, navy structure, restrained gold, and sharper rules. Use for company research, earnings, valuation, IPO, markets, and investment frameworks.
-- `editorial` — Warm paper, vermilion accents, serif display type, and magazine-like section treatments. Use for opinion, interviews, brand stories, industry narratives, and long-form editorial posts.
-- `tech` — Dark navy, cyan highlights, a subtle grid, and luminous data accents. Use for AI, chips, software, infrastructure, model comparisons, and technical explainers.
+- `finance` — Default. Use a professional financial-news look with cool paper, navy structure, restrained gold, and sharp information hierarchy. Use for market updates, company research, earnings, valuation, investment frameworks, industry narratives, and most AI-investment coverage.
+- `tech` — Use a dark navy, cyan-highlighted, grid-based look for strongly technical AI topics such as models, chips, computing infrastructure, software architecture, and technical comparisons.
 
 ## Rules
 
 - Keep one theme for the entire carousel.
-- Do not infer `tech` merely because the article mentions AI; prefer `classic` for approachable education and `tech` for explicitly technical or futuristic positioning.
-- Prefer `finance` for investment research even when the company is a technology company.
-- Preserve `classic` when revising an existing input without a theme field.
+- Use `finance` when the theme field is omitted.
+- Do not infer `tech` merely because an article mentions AI; use it only when the subject and framing are explicitly technical or futuristic.
+- Prefer `finance` whenever investment relevance, market impact, valuation, company performance, or industry economics drives the story, including technology-company coverage.
+- Migrate legacy `classic` and `editorial` inputs to `finance`; do not preserve removed theme names.
 - Reject unknown theme names instead of silently falling back.

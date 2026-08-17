@@ -321,7 +321,7 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
 async function main() {
   const options = parseArguments(process.argv.slice(2));
   if (options.help) {
-    process.stdout.write("Usage: node render.mjs <input.md> --output <output-dir> [--theme classic|finance|editorial|tech] [--endcard native|guided] [--cover-only] [--json]\n");
+    process.stdout.write("Usage: node render.mjs <input.md> --output <output-dir> [--theme finance|tech] [--endcard native|guided] [--cover-only] [--json]\n");
     return;
   }
   if (!options.input || !options.output) {

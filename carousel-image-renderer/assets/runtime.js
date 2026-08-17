@@ -1,6 +1,6 @@
 (() => {
   const data = window.__CAROUSEL_DATA__;
-  document.documentElement.dataset.theme = data.meta.theme || "classic";
+  document.documentElement.dataset.theme = data.meta.theme || "finance";
   const root = document.getElementById("carousel");
   const pageRecords = [];
   const BRAND_NAME = "智富界";

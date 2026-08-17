@@ -137,7 +137,7 @@ lint 使用稳定告警码。逐项修复或明确接受告警，处理后重新
 node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图" --json
 ```
 
-渲染器输出编号 PNG 和 `manifest.json`，默认使用 native 导流卡；需要二维码截图引导时使用 `--endcard guided`。可用 `--theme classic|finance|editorial|tech` 和 `--endcard native|guided` 覆盖。
+渲染器输出编号 PNG 和 `manifest.json`，默认使用 `finance` 主题和 native 导流卡；需要强化 AI 技术感时使用 `--theme tech`，需要二维码截图引导时使用 `--endcard guided`。可用 `--theme finance|tech` 和 `--endcard native|guided` 覆盖。
 
 渲染器以事务方式替换产物，失败时保留上一成功版本。以本次命令的退出码为准：成功后使用本次生成的 manifest 进入步骤 9；失败时按错误对象的 `action` 修复并重新渲染。确保命令保留 `render.mjs` 的原始退出码。
 

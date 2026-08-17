@@ -1,52 +1,6 @@
 :root {
   --page-width: 1080px;
   --page-height: 1440px;
-  --paper: #fbfaf5;
-  --paper-top: #fdfcf8;
-  --ink: #1f2937;
-  --body-ink: #273140;
-  --strong-ink: #17202c;
-  --heading-ink: #202936;
-  --soft-ink: #303a49;
-  --subtle-ink: #4b5360;
-  --marker-ink: #182230;
-  --muted: #7c818c;
-  --gold: #dea52d;
-  --gold-dark: #cf9418;
-  --marker: #ffe34f;
-  --marker-deep: #ffdf38;
-  --warm-red: #df5b32;
-  --rule: rgba(31, 41, 55, 0.14);
-  --soft-rule: rgba(31, 41, 55, 0.1);
-  --wash: rgba(222, 165, 45, 0.04);
-  --section-wash: rgba(222, 165, 45, 0.24);
-  --soft-accent: rgba(222, 165, 45, 0.12);
-  --accent-border: rgba(222, 165, 45, 0.2);
-  --quote-ink: #4a515c;
-  --quote-bg: rgba(222, 165, 45, 0.08);
-  --callout-start: #fff8d9;
-  --callout-end: #fff9e5;
-  --code-bg: #222b37;
-  --code-head: rgba(0, 0, 0, 0.17);
-  --code-ink: #f1f3f5;
-  --code-accent: #efc05c;
-  --image-bg: rgba(255, 255, 255, 0.72);
-  --table-head-bg: rgba(222, 165, 45, 0.16);
-  --table-row-bg: rgba(255, 255, 255, 0.45);
-  --table-alt-bg: rgba(222, 165, 45, 0.045);
-  --html-bg: rgba(222, 165, 45, 0.07);
-  --footer-ink: #202936;
-  --footer-muted: #a3a5ab;
-  --cover-subtitle: #59606b;
-  --cover-footer: #858990;
-  --cover-glow-a: rgba(222, 165, 45, 0.12);
-  --cover-glow-b: rgba(255, 227, 79, 0.22);
-  --font-sans: "PingFang SC", "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
-  --font-display: var(--font-sans);
-  --title-underline: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 620 24'%3E%3Cpath d='M2 12 C45 2 82 22 125 10 S205 20 250 9 S340 18 388 9 S500 18 618 7' fill='none' stroke='%23DEA52D' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E");
-}
-
-html[data-theme="finance"] {
   --paper: #f3f6fa;
   --paper-top: #fbfcfe;
   --ink: #18253a;
@@ -73,6 +27,8 @@ html[data-theme="finance"] {
   --callout-start: #edf3f9;
   --callout-end: #f6f8fb;
   --code-bg: #162337;
+  --code-head: rgba(0, 0, 0, 0.17);
+  --code-ink: #f1f3f5;
   --code-accent: #d5ad59;
   --image-bg: rgba(255, 255, 255, 0.8);
   --table-head-bg: rgba(35, 79, 126, 0.13);
@@ -85,50 +41,9 @@ html[data-theme="finance"] {
   --cover-footer: #6f7c90;
   --cover-glow-a: rgba(43, 83, 126, 0.14);
   --cover-glow-b: rgba(186, 141, 50, 0.13);
+  --font-sans: "PingFang SC", "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  --font-display: var(--font-sans);
   --title-underline: linear-gradient(90deg, #ba8d32 0%, #315f91 72%, transparent 100%);
-}
-
-html[data-theme="editorial"] {
-  --paper: #fff9f1;
-  --paper-top: #fffdf9;
-  --ink: #302b2a;
-  --body-ink: #3b3331;
-  --strong-ink: #241f1e;
-  --heading-ink: #312827;
-  --soft-ink: #4e4140;
-  --subtle-ink: #766664;
-  --marker-ink: #321d18;
-  --muted: #897a76;
-  --gold: #c54832;
-  --gold-dark: #a93727;
-  --marker: #ffd89a;
-  --marker-deep: #ffc66f;
-  --warm-red: #c54832;
-  --rule: rgba(88, 49, 43, 0.16);
-  --soft-rule: rgba(88, 49, 43, 0.1);
-  --wash: rgba(197, 72, 50, 0.035);
-  --section-wash: rgba(197, 72, 50, 0.18);
-  --soft-accent: rgba(197, 72, 50, 0.085);
-  --accent-border: rgba(197, 72, 50, 0.18);
-  --quote-ink: #655451;
-  --quote-bg: rgba(197, 72, 50, 0.065);
-  --callout-start: #fff0dc;
-  --callout-end: #fff7ea;
-  --code-bg: #302827;
-  --code-accent: #f0b574;
-  --image-bg: rgba(255, 255, 255, 0.72);
-  --table-head-bg: rgba(197, 72, 50, 0.12);
-  --table-row-bg: rgba(255, 255, 255, 0.48);
-  --table-alt-bg: rgba(197, 72, 50, 0.035);
-  --html-bg: rgba(197, 72, 50, 0.05);
-  --footer-ink: #3a302e;
-  --footer-muted: #a0928d;
-  --cover-subtitle: #6e5c57;
-  --cover-footer: #8a7771;
-  --cover-glow-a: rgba(197, 72, 50, 0.12);
-  --cover-glow-b: rgba(255, 183, 91, 0.18);
-  --font-display: "Songti SC", "STSong", "Noto Serif CJK SC", serif;
-  --title-underline: linear-gradient(90deg, #c54832 0%, #e59e72 74%, transparent 100%);
 }
 
 html[data-theme="tech"] {
@@ -910,14 +825,12 @@ html[data-theme="finance"] .page-card {
 }
 
 html[data-theme="finance"] .cover-title::after,
-html[data-theme="editorial"] .cover-title::after,
 html[data-theme="tech"] .cover-title::after {
   height: 7px;
   border-radius: 999px;
 }
 
 html[data-theme="finance"] .cover-title::after { width: 72%; }
-html[data-theme="editorial"] .cover-title::after { width: 48%; }
 html[data-theme="tech"] .cover-title::after { width: 68%; }
 
 html[data-theme="finance"] .block-section {
@@ -934,28 +847,6 @@ html[data-theme="finance"] .section-diamond {
 
 html[data-theme="finance"] .section-text {
   background: none;
-}
-
-html[data-theme="editorial"] .page-card {
-  box-shadow: inset 8px 0 0 rgba(197, 72, 50, 0.92);
-}
-
-html[data-theme="editorial"] .cover-kicker {
-  color: #fff8f1;
-  background: #c54832;
-}
-
-html[data-theme="editorial"] .section-diamond {
-  width: 12px;
-  height: 40px;
-  margin-top: 7px;
-  border-radius: 8px;
-  transform: none;
-}
-
-html[data-theme="editorial"] .section-text {
-  background: none;
-  border-bottom: 3px solid rgba(197, 72, 50, 0.32);
 }
 
 html[data-theme="tech"] .page-card {

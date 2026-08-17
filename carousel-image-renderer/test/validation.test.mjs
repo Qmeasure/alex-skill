@@ -51,6 +51,32 @@ title: 明确标题
   assert.deepEqual(errorCodes(source), []);
 });
 
+test("finance is the default and only finance and tech are supported", () => {
+  const base = `---
+title: 主题测试
+---
+
+正文。
+
+:::risk
+存在波动风险。
+:::
+
+:::thumbnails
+![](./page-01.png)
+:::
+`;
+  assert.equal(parseDocument(base).meta.theme, "finance");
+  for (const theme of ["finance", "tech"]) {
+    const source = base.replace("title: 主题测试", `title: 主题测试\ntheme: ${theme}`);
+    assert.ok(!errorCodes(source).includes("E_THEME_UNSUPPORTED"));
+  }
+  for (const theme of ["classic", "editorial"]) {
+    const source = base.replace("title: 主题测试", `title: 主题测试\ntheme: ${theme}`);
+    assert.ok(errorCodes(source).includes("E_THEME_UNSUPPORTED"));
+  }
+});
+
 test("thumbnails must be the final content block", () => {
   const source = `---
 title: 明确标题

@@ -1,7 +1,7 @@
 // Markdown 解析与文档校验：把输入 Markdown 解析为渲染文档（meta + blocks）。
 // 纯函数，零外部依赖；被 render.mjs 与 validate.mjs 共同使用。
 
-const SUPPORTED_THEMES = new Set(["classic", "finance", "editorial", "tech"]);
+const SUPPORTED_THEMES = new Set(["finance", "tech"]);
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (character) => ({
@@ -484,7 +484,7 @@ export function parseDocument(source) {
     subtitle: "",
     kicker: "图文报告",
     cover: true,
-    theme: "classic",
+    theme: "finance",
     ...suppliedMeta
   };
   const extracted = extractFootnotes(body);
@@ -496,7 +496,7 @@ export function parseDocument(source) {
   meta.subtitle = String(meta.subtitle || "").trim();
   meta.kicker = String(meta.kicker || "图文报告").trim();
   meta.cover = meta.cover !== false;
-  meta.theme = String(meta.theme || "classic").trim().toLowerCase();
+  meta.theme = String(meta.theme || "finance").trim().toLowerCase();
   if (meta.callout_label != null) meta.callout_label = String(meta.callout_label).trim();
   meta.titleHtml = parseInline(meta.title);
   meta.subtitleHtml = parseInline(meta.subtitle);
@@ -527,7 +527,7 @@ export function validateDocument(document) {
   if (!SUPPORTED_THEMES.has(document.meta.theme)) {
     addError("E_THEME_UNSUPPORTED", `Unsupported theme "${document.meta.theme}".`, {
       actual: document.meta.theme,
-      expected: "classic, finance, editorial, or tech",
+      expected: "finance or tech",
       action: "Set front matter `theme` to one of the supported values."
     });
   }

@@ -29,7 +29,7 @@ theme: finance
 - `subtitle`：可选封面副标题。
 - `kicker`：可选封面标签；默认“图文报告”。
 - `cover`：设为 `true`；省略时默认为 `true`，设为 `false` 会返回 `E_COVER_REQUIRED`。
-- `theme`：`classic`、`finance`、`editorial` 或 `tech`，默认 `classic`。
+- `theme`：`finance` 或 `tech`，默认 `finance`。
 - `callout_label`：可选，覆盖 `:::callout` 的默认“AI观点”前缀。
 - `source_pages`：可选正整数，用于导流页的“完整内容预览 共X页”。
 
