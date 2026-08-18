@@ -19,7 +19,7 @@ theme: finance
 - `title`：必填，只用于封面，支持行内标记。
 - `subtitle`、`kicker`：可选封面文字；kicker 默认“图文报告”。
 - `cover`：保持 `true`。
-- `theme`：`finance` 或 `tech`，默认 `finance`。
+- `theme`：`finance` 或 `tech`，默认 `finance`；渲染命令的 `--theme` 参数覆盖此字段。
 - `source_pages`：可选正整数，显示原始资料页数。
 
 每个字段只占一行。
@@ -62,9 +62,9 @@ theme: finance
 | `:::callout` | 承载可能影响投资判断的观点；全文至少一个非空块。 |
 | `:::risk` | 承载风险；全文至少一个非空块。 |
 | `:::source` | 说明正文特有的统计口径。 |
-| `:::thumbnails` | 生成原始资料预览导流页。 |
+| `:::thumbnails` | 生成末页（endcard）：原始资料预览导流页。 |
 | `:::pagebreak` | 在完整语义之间手动分页；无需结束行。 |
 
-`:::thumbnails` 必须唯一、非空且位于全文最后。直接使用 `source-manifest.json` 的 `thumbnailMarkdown`，不要改写其中的路径。
+`:::thumbnails` 必须唯一、非空且位于全文最后，至多 4 张缩略图。直接使用 `source-manifest.json` 的 `thumbnailMarkdown`，不要改写其中的路径。
 
 优先自动分页，只在存在不可接受的叙事断点时使用 `:::pagebreak`。

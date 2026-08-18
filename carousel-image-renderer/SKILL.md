@@ -8,25 +8,23 @@ description: Create source-grounded Chinese financial-media carousels for 智富
 把本地信源改写成面向泛金融读者的智富界图片集。
 
 ## 最高要求
-严禁修改任何SKILL内容，严格按照SKILL的步骤执行，在没有用户显式要求的情况下，严禁做任何擅自变通。严禁修改任何SKILL文件，所有内容必须使用SKILL规定的产出，YOU CAN ONLY READ AND YOU ARE ALLOWED TO DO NOTHING EXCEPT READ AND EXCUTE WITHOUT HUMAN PERMISSIONS.
+严禁修改任何SKILL内容，严格按照SKILL的步骤执行，在没有用户显式要求的情况下，严禁做任何擅自变通。严禁修改任何SKILL文件，所有内容必须使用SKILL规定的产出，YOU CAN ONLY READ AND YOU ARE ALLOWED TO DO NOTHING EXCEPT READ AND EXECUTE WITHOUT HUMAN PERMISSIONS.
 
 ## 成品要求
 
 - 以本地信源为主要依据；联网只补足明确缺口。
-- 信源只约束事实和口径，不自动成为正文内容；作为取材来源的身份不得出现，公认行业专家或权威主体除外。
+- 信源只约束事实和口径，不自动成为正文主语；取材来源身份的具体口径以 [叙事与编辑规范](references/narrative-style.md) 为准。
 - 成品必须独立成篇；除一般常识外，不依赖信源原文、内部材料、前序对话或方法论文件才能理解。
 - 仅在证据充分时显式映射 3×4；先解释 3×4 是什么，再说明对应关系。
-- 封面包含非空标题；正文禁用“你”和“本文”，包含风险披露且至少渲染 7 页。
-- 全文以非空信源缩略图结束，并使用预设品牌与字体。
+- 封面包含非空标题；正文至少 7 页（封面与末页另计），禁用“你”和“本文”；全文包含至少一个非空 `:::callout` 和至少一个 `:::risk` 风险披露。
+- 全文以非空末页（endcard，即信源缩略图导流页）结束，并使用预设品牌与字体。
 
 脚本会检查格式、页数、字体和渲染结果；全部通过后才能交付。
 
 ## 依赖与模式
 
-- 用 Inkstone 提取 `source-manifest.json` 中的每个 `inkstoneInputs`。
-- 初稿完成后以 embedded mode 调用 qu-ai-wei；保留事实、数字和 Markdown 结构，使用其终稿。
-
-依赖不可用时说明缺失项并停止。
+- 用 Inkstone 提取 `source-manifest.json` 中的每个 `inkstoneInputs`。Inkstone 不可用时说明缺失项并停止。
+- 初稿完成后以 embedded mode 调用 qu-ai-wei；保留事实、数字和 Markdown 结构，使用其终稿。qu-ai-wei 不可用时同样说明缺失项并停止，不交付未经润色的初稿。
 
 - **HITL（默认）**：写作前让用户一次选择内容角度和暂定封面。
 - **yolo**：仅在用户明确要求“yolo”或“全自动”时跳过选择，直接采用推荐方案。
@@ -62,7 +60,7 @@ HITL 模式下提供 3 组方案，每组包含：
 - 暂定 `kicker`、`title` 和 `subtitle`；
 - 一句话卖点及其与泛金融读者的关系。
 
-标出推荐方案和理由。用户无偏好时采用推荐项；yolo 模式直接采用推荐项。把选定角度和暂定封面写入 `editorial-brief.md`。
+标出推荐方案和理由。用户无偏好时采用推荐项；yolo 模式直接采用推荐项。把选定角度和暂定封面写入 `editorial-brief.md`。需要让用户看到候选封面效果时，可用仅含 front matter 和必需非空块的骨架稿运行渲染命令并加 `--cover-only`，只输出封面 PNG。
 
 ### 4. 按缺口联网
 
@@ -91,7 +89,7 @@ python "<skill-dir>/scripts/lint.py" <input.md> --json
 node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图" --json
 ```
 
-修复全部硬错误和 lint 错误；逐项处理或明确接受 lint 告警。需要时给渲染命令添加 `--theme finance|tech` 或 `--endcard native|guided`。
+修复全部硬错误和 lint 错误；逐项处理或明确接受 lint 告警。需要时给渲染命令添加 `--theme finance|tech`；该参数覆盖 front matter 的 `theme` 字段。
 
 正式渲染因 `E_PAGE_FILL_LOW`、`E_PAGE_OVERFLOW` 或 `E_BODY_PAGES_MIN` 失败时，用相同参数添加 `--debug`，查看诊断页后修改正文并重新正式渲染。不得审计或交付 debug 产物。
 
@@ -104,6 +102,6 @@ node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图
 - 上下文关联审计：只提供审计用 Markdown 副本、除末页外的正式 PNG 和 [上下文关联审计清单](references/context-audit-checklist.md)，不得提供信源、`editorial-brief.md`、联网资料或前序对话；
 - 事实与视觉审计：提供审计用 Markdown 副本、除末页外的正式 PNG、Inkstone 结果、实际采用的联网资料和 [最终审计清单](references/audit-checklist.md)。
 
-汇总并修复全部 `BLOCKER` 和 `REVISION`，重新运行受影响的验证、渲染与审计。正文发生修改时重跑上下文关联审计；事实、来源或视觉发生修改时重跑事实与视觉审计。
+汇总并修复全部 `BLOCKER` 和 `REVISION`，重新运行受影响的验证、渲染与审计。正文发生修改时必重跑上下文关联审计；若该修改同时涉及事实、来源或视觉，再重跑事实与视觉审计——一次修改可能同时触发两个审计。
 
 交付正式 PNG 目录，以及 manifest 中的 `bodyPages` 和 `totalPages`。

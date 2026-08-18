@@ -15,8 +15,9 @@
 - 联网材料由执行 Agent 判断，只记录实际采用的事实，不设置候选事实预审。
 - 默认只有一次 HITL，同时选择内容角度和暂定封面；yolo 模式跳过。
 - 最终封面可以润色，但不能改变用户选择的角度和标题承诺。
-- 并行运行首次读者审计和事实与视觉审计；两个 sub-agent 均不得接收最后一页。
-- 最后一页是渲染器模板，只由验证与渲染流程检查。
+- 并行运行上下文关联审计和事实与视觉审计；两个 sub-agent 均不得接收最后一页。
+- 最后一页（末页/endcard）由渲染器模板生成，只由验证与渲染流程检查。
+- `--endcard guided` 是休眠功能：因二维码可能触发平台限流而暂时搁置，故意不写入运行提示词——Agent 不知道就不会自行启用。产品层面重新启用前，维护时不得将其文档化。
 - 3×4 是独立产品规则。普通提示词重构不得改变其定义或映射标准，除非任务明确要求。
 
 ## 权威位置
@@ -30,15 +31,15 @@
 | 3×4 定义与映射 | `references/3x4-methodology.md` |
 | 首次读者上下文关联审计 | `references/context-audit-checklist.md` |
 | 事实、来源、3×4 证据与视觉审计 | `references/audit-checklist.md` |
-| 防御性否定的写作与审计边界 | `references/defensive-negation-examples.md` |
+| 防御性否定的判断示例 | `references/defensive-negation-examples.md`（写作规范在 narrative-style.md，审计口径在 audit-checklist.md） |
 | 格式、页数、字体、尺寸和渲染硬约束 | `scripts/` 与 `test/` |
 
-运行文件可以简短引用关键约束，但不要复制另一文件的解释、完整规则或实现细节。
+运行文件可以简短引用关键约束，但不要复制另一文件的解释、完整规则或实现细节。非权威文件只引用权威文件，不复述规则细节；唯一例外是两份审计清单——它们独立分发给 sub-agent，可以逐字复制权威原文，但不得改写，且修改权威文件时必须同步核对清单中的副本。
 
 ## 修改检查
 
 1. 先确定新规则的唯一归属，再编辑。
-2. 搜索同义要求、反向重述和过时引用；删除不会改变合格 Agent 行为的句子。
+2. 修改任何规则前，全仓搜索其关键词、同义要求、反向重述和过时引用，列出所有复述点并同步修改或删除；删除不会改变合格 Agent 行为的句子。
 3. 让 `SKILL.md` 只保留编排所需信息；让 reference 只承担表中对应职责。
 4. 能由脚本返回稳定诊断的问题，不在多处枚举错误条件和实现参数。
 5. 更新运行规则后检查 `agents/openai.yaml` 是否仍与技能用途一致。
@@ -50,7 +51,7 @@
 按改动风险运行相关检查，不默认运行完整测试套件：
 
 ```bash
-python "<skill-creator-dir>/scripts/quick_validate.py" .
+python "<skill-creator-dir>/scripts/quick_validate.py" .  # 外部 skill-creator 技能的脚本，不在本仓库
 node --test test/validation.test.mjs
 npm run check
 ```
