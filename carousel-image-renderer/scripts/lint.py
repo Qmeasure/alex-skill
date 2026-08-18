@@ -1,10 +1,22 @@
 #!/usr/bin/env python3
-"""Emit low-noise, advisory style diagnostics for carousel Markdown."""
+"""Emit mechanical style diagnostics for carousel Markdown."""
 
 import argparse
 import json
 import re
 from pathlib import Path
+
+
+AI_BLACKLISTED_PHRASES = (
+    "证据最完整的落点",
+    "这条线索",
+    "这项映射",
+    "先说清楚",
+)
+
+
+def error(code, message, **details):
+    return {"code": code, "severity": "error", "message": message, **details}
 
 
 def warning(code, message, **details):
@@ -70,6 +82,32 @@ def lint(filepath):
     findings = []
     body_no_code = strip_code_blocks(body)
     absolute_line = lambda line: body_line_offset + line
+
+    for field in ("title", "subtitle", "kicker"):
+        value = meta.get(field, "")
+        for phrase in AI_BLACKLISTED_PHRASES:
+            if phrase in value:
+                findings.append(error(
+                    "E_AI_BLACKLIST_PHRASE",
+                    f'Visible copy contains blacklisted AI wording “{phrase}”.',
+                    line=meta_lines.get(field),
+                    actual=phrase,
+                    action="Rewrite the visible copy without the blacklisted phrase.",
+                ))
+
+    blacklisted_body = strip_directives_content(body_no_code, "thumbnails")
+    for line_number, line in enumerate(blacklisted_body.split("\n"), start=1):
+        if line.strip().startswith(":::"):
+            continue
+        for phrase in AI_BLACKLISTED_PHRASES:
+            if phrase in line:
+                findings.append(error(
+                    "E_AI_BLACKLIST_PHRASE",
+                    f'Visible copy contains blacklisted AI wording “{phrase}”.',
+                    line=absolute_line(line_number),
+                    actual=phrase,
+                    action="Rewrite the visible copy without the blacklisted phrase.",
+                ))
 
     banned_kicker = ["解读", "深度分析", "研判", "点评"]
     kicker = meta.get("kicker", "")
@@ -214,7 +252,7 @@ def lint(filepath):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Advisory mechanical style checks for carousel Markdown.")
+    parser = argparse.ArgumentParser(description="Mechanical style checks for carousel Markdown.")
     parser.add_argument("input", help="UTF-8 Markdown input")
     parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
     args = parser.parse_args()
@@ -235,17 +273,25 @@ def main():
             print(f"Error {failure['code']}: {failure['message']} {failure['actual']}")
         return 1
 
+    errors = [item for item in findings if item["severity"] == "error"]
+    warnings = [item for item in findings if item["severity"] == "warning"]
     if args.json:
-        print(json.dumps({"ok": True, "warnings": findings, "count": len(findings)}, ensure_ascii=False, indent=2))
+        print(json.dumps({
+            "ok": not errors,
+            "errors": errors,
+            "warnings": warnings,
+            "count": len(findings),
+        }, ensure_ascii=False, indent=2))
     elif findings:
-        print(f"Found {len(findings)} advisory warning(s):\n")
         for item in findings:
             location = f" line {item['line']}" if item.get("line") else ""
-            print(f"  Warning {item['code']}{location}: {item['message']}")
-        print("\nReview each warning; warnings do not fail delivery by themselves.")
+            label = "Error" if item["severity"] == "error" else "Warning"
+            print(f"  {label} {item['code']}{location}: {item['message']}")
+        if warnings:
+            print("\nReview each warning; warnings do not fail delivery by themselves.")
     else:
         print("No mechanical style warnings found.")
-    return 0
+    return 1 if errors else 0
 
 
 if __name__ == "__main__":

@@ -91,7 +91,7 @@ python "<skill-dir>/scripts/lint.py" <input.md> --json
 node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图" --json
 ```
 
-修复全部硬错误；逐项处理或明确接受 lint 告警。需要时给渲染命令添加 `--theme finance|tech` 或 `--endcard native|guided`。
+修复全部硬错误和 lint 错误；逐项处理或明确接受 lint 告警。需要时给渲染命令添加 `--theme finance|tech` 或 `--endcard native|guided`。
 
 正式渲染因 `E_PAGE_FILL_LOW`、`E_PAGE_OVERFLOW` 或 `E_BODY_PAGES_MIN` 失败时，用相同参数添加 `--debug`，查看诊断页后修改正文并重新正式渲染。不得审计或交付 debug 产物。
 

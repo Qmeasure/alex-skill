@@ -50,3 +50,37 @@ kicker: 深度分析
   assert.equal(response.warnings[2].line, 8);
   assert.equal(response.warnings[3].line, 10);
 });
+
+test("lint blocks exact AI blacklist phrases outside code and thumbnails", async (context) => {
+  const workspace = await fs.mkdtemp(path.join(os.tmpdir(), "carousel-lint-blacklist-"));
+  context.after(() => fs.rm(workspace, { recursive: true, force: true }));
+  const inputPath = path.join(workspace, "input.md");
+  await fs.writeFile(inputPath, `---
+title: 证据最完整的落点
+---
+
+这条线索需要重写。
+这项映射需要重写。
+先说清楚背景。
+
+\`\`\`text
+先说清楚
+\`\`\`
+
+:::thumbnails
+![这条线索](./page.png)
+:::
+`, "utf8");
+
+  const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+  const result = await runPython(["scripts/lint.py", inputPath, "--json"], projectRoot);
+  assert.equal(result.code, 1, result.stderr || result.stdout);
+  const response = JSON.parse(result.stdout);
+  assert.equal(response.ok, false);
+  assert.deepEqual(response.errors.map((item) => item.actual), [
+    "证据最完整的落点",
+    "这条线索",
+    "这项映射",
+    "先说清楚"
+  ]);
+});
