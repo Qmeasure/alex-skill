@@ -37,6 +37,19 @@ test("audit targets identify the pages that need visual review", () => {
   });
 });
 
+test("audit prompts enforce a closed visual-review scope", async () => {
+  const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+  const [skill, auditChecklist] = await Promise.all([
+    fs.readFile(path.join(projectRoot, "SKILL.md"), "utf8"),
+    fs.readFile(path.join(projectRoot, "references/audit-checklist.md"), "utf8")
+  ]);
+  assert.match(skill, /sub-agent 只报告各自清单明确列出的类别，不得扩展审计范围/);
+  assert.match(skill, /清单外条目一律无效，不得触发改稿、分页调整、重新渲染、重新审计或阻断交付/);
+  assert.match(auditChecklist, /视觉部分只检查下列项目，不得增加清单外类别/);
+  assert.match(auditChecklist, /是否存在缺图、错图、乱码、字体问题或不合理空白/);
+  assert.doesNotMatch(auditChecklist, /裁切|溢出|残边|跨页残影|元素越界/);
+});
+
 test("default endcard is native and does not request a QR asset", () => {
   const endcard = resolveEndcardVariant();
   assert.equal(endcard, "native");

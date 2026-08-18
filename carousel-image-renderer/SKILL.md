@@ -97,11 +97,11 @@ node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图
 
 先准备审计输入副本：从 Markdown 删除 `source_pages` 和末尾 `:::thumbnails` 块，排除最后一张 PNG，并从提供的 manifest 信息中排除 endcard 字段。不得向任何 sub-agent 提供、展示或转述最后一页；原始交付文件保持不变，末页只由验证与渲染流程检查。
 
-并行启动两个相互独立的 sub-agent：
+并行启动两个相互独立的 sub-agent。任务须要求 sub-agent 只报告各自清单明确列出的类别，不得扩展审计范围：
 
 - 上下文关联审计：只提供审计用 Markdown 副本、除末页外的正式 PNG 和 [上下文关联审计清单](references/context-audit-checklist.md)，不得提供信源、`editorial-brief.md`、联网资料或前序对话；
 - 事实与视觉审计：提供审计用 Markdown 副本、除末页外的正式 PNG、Inkstone 结果、实际采用的联网资料和 [最终审计清单](references/audit-checklist.md)。
 
-汇总并修复全部 `BLOCKER` 和 `REVISION`，重新运行受影响的验证、渲染与审计。正文发生修改时必重跑上下文关联审计；若该修改同时涉及事实、来源或视觉，再重跑事实与视觉审计——一次修改可能同时触发两个审计。
+只接受两份清单明确列出的审计类别；清单外条目一律无效，不得触发改稿、分页调整、重新渲染、重新审计或阻断交付。汇总并修复其余全部 `BLOCKER` 和 `REVISION`，重新运行受影响的验证、渲染与审计。正文发生修改时必重跑上下文关联审计；若该修改同时涉及事实、来源或视觉，再重跑事实与视觉审计——一次修改可能同时触发两个审计。
 
 交付正式 PNG 目录，以及 manifest 中的 `bodyPages` 和 `totalPages`。
