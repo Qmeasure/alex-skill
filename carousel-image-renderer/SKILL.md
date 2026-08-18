@@ -15,7 +15,6 @@ description: Create source-grounded Chinese financial-media carousels for 智富
 - 以本地信源为主要依据；联网只补足明确缺口。
 - 信源只约束事实和口径，不自动成为正文内容；作为取材来源的身份不得出现，公认行业专家或权威主体除外。
 - 成品必须独立成篇；除一般常识外，不依赖信源原文、内部材料、前序对话或方法论文件才能理解。
-- 正文中的每一处内容都必须服务文章主题；写作和审计修复均遵守 [正文用途 Blacklist](references/content-purpose-blacklist.md)。
 - 仅在证据充分时显式映射 3×4；先解释 3×4 是什么，再说明对应关系。
 - 封面包含非空标题；正文禁用“你”和“本文”，包含风险披露且至少渲染 7 页。
 - 全文以非空信源缩略图结束，并使用预设品牌与字体。
@@ -105,6 +104,6 @@ node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图
 - 上下文关联审计：只提供审计用 Markdown 副本、除末页外的正式 PNG 和 [上下文关联审计清单](references/context-audit-checklist.md)，不得提供信源、`editorial-brief.md`、联网资料或前序对话；
 - 事实与视觉审计：提供审计用 Markdown 副本、除末页外的正式 PNG、Inkstone 结果、实际采用的联网资料和 [最终审计清单](references/audit-checklist.md)。
 
-汇总并修复全部 `BLOCKER` 和 `REVISION`；可以重写、增删或重组正文，但每处改动都必须服务文章主题。重新运行受影响的验证、渲染与审计。正文发生修改时重跑上下文关联审计；事实、来源或视觉发生修改时重跑事实与视觉审计。
+汇总并修复全部 `BLOCKER` 和 `REVISION`，重新运行受影响的验证、渲染与审计。正文发生修改时重跑上下文关联审计；事实、来源或视觉发生修改时重跑事实与视觉审计。
 
 交付正式 PNG 目录，以及 manifest 中的 `bodyPages` 和 `totalPages`。
