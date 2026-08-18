@@ -13,7 +13,8 @@ description: Create source-grounded Chinese financial-media carousels for 智富
 ## 成品要求
 
 - 以本地信源为主要依据；联网只补足明确缺口。
-- 仅在证据充分时显式映射 3×4。
+- 成品必须独立成篇；除一般常识外，不依赖信源原文、内部材料、前序对话或方法论文件才能理解。
+- 仅在证据充分时显式映射 3×4；先解释 3×4 是什么，再说明对应关系。
 - 封面包含非空标题；正文禁用“你”和“本文”，包含风险披露且至少渲染 7 页。
 - 全文以非空信源缩略图结束，并使用预设品牌与字体。
 
@@ -95,6 +96,11 @@ node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图
 
 ### 7. 审计并交付
 
-启动独立 sub-agent，提供最终 Markdown、PNG、Inkstone 结果、实际采用的联网资料和 [最终审计清单](references/audit-checklist.md)。修复全部 `BLOCKER` 和 `REVISION`，重新运行受影响的验证、渲染与审计。
+并行启动两个相互独立的 sub-agent：
+
+- 上下文关联审计：只提供最终 Markdown、正式 PNG 和 [上下文关联审计清单](references/context-audit-checklist.md)，不得提供信源、`editorial-brief.md`、联网资料或前序对话；
+- 事实与视觉审计：提供最终 Markdown、正式 PNG、Inkstone 结果、实际采用的联网资料和 [最终审计清单](references/audit-checklist.md)。
+
+汇总并修复全部 `BLOCKER` 和 `REVISION`，重新运行受影响的验证、渲染与审计。正文发生修改时重跑上下文关联审计；事实、来源或视觉发生修改时重跑事实与视觉审计。
 
 交付正式 PNG 目录，以及 manifest 中的 `bodyPages` 和 `totalPages`。
