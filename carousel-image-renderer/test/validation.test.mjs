@@ -27,18 +27,23 @@ test("hard requirements return stable error codes together", () => {
   const codes = errorCodes("# 旧版回退标题\n\n这段正文里有你。\n");
   assert.deepEqual(codes, [
     "E_TITLE_REQUIRED",
+    "E_CALLOUT_REQUIRED",
     "E_RISK_REQUIRED",
     "E_THUMBNAILS_REQUIRED",
     "E_BODY_SECOND_PERSON"
   ]);
 });
 
-test("valid title, risk, and final thumbnails pass hard validation", () => {
+test("valid title, callout, risk, and final thumbnails pass hard validation", () => {
   const source = `---
 title: 明确标题
 ---
 
 市场变化会影响企业成本。
+
+:::callout
+成本变化可能重塑企业竞争力。
+:::
 
 :::risk
 价格波动可能放大短期回撤。
@@ -57,6 +62,10 @@ title: 主题测试
 ---
 
 正文。
+
+:::callout
+行业变化可能带来结构性机会。
+:::
 
 :::risk
 存在波动风险。
@@ -82,6 +91,10 @@ test("thumbnails must be the final content block", () => {
 title: 明确标题
 ---
 
+:::callout
+行业变化可能带来结构性机会。
+:::
+
 :::risk
 存在波动风险。
 :::
@@ -106,6 +119,10 @@ title: 明确标题
 
 ![示意图](./你.png)
 
+:::callout
+行业变化可能带来结构性机会。
+:::
+
 :::risk
 存在波动风险。
 :::
@@ -126,6 +143,10 @@ title: 明确标题
 
 - 第一层
   - 你会看到的嵌套项
+
+:::callout
+行业变化可能带来结构性机会。
+:::
 
 :::risk
 存在波动风险。
@@ -152,6 +173,10 @@ title: 明确标题
 
 ![](./本文.png)
 
+:::callout
+行业变化可能带来结构性机会。
+:::
+
 :::risk
 存在波动风险。
 :::
@@ -175,6 +200,10 @@ title: 明确标题
 - 第一层
   - 本文结论
 
+:::callout
+行业变化可能带来结构性机会。
+:::
+
 :::risk
 存在波动风险。
 :::
@@ -193,6 +222,10 @@ test("more than four endcard thumbnails fail with a dedicated code", () => {
 title: 明确标题
 ---
 
+:::callout
+行业变化可能带来结构性机会。
+:::
+
 :::risk
 存在波动风险。
 :::
@@ -209,6 +242,10 @@ test("cover cannot be disabled because total delivery requires nine pages", () =
 title: 明确标题
 cover: false
 ---
+
+:::callout
+行业变化可能带来结构性机会。
+:::
 
 :::risk
 存在波动风险。
@@ -228,6 +265,10 @@ title: 明确标题
 
 你不应出现在正文。
 
+:::callout
+行业变化可能带来结构性机会。
+:::
+
 :::risk
 存在波动风险。
 :::
@@ -238,6 +279,28 @@ title: 明确标题
 `;
   const error = validateDocument(parseDocument(source)).errors.find((item) => item.code === "E_BODY_SECOND_PERSON");
   assert.equal(error.line, 5);
+});
+
+test("callout label override is discarded by the parser", () => {
+  const document = parseDocument(`---
+title: 固定标签测试
+callout_label: 自定义观点
+---
+
+:::callout
+行业变化可能带来结构性机会。
+:::
+
+:::risk
+需求波动可能压低价格。
+:::
+
+:::thumbnails
+![](./page-01.png)
+:::
+`);
+  assert.equal(document.meta.callout_label, undefined);
+  assert.deepEqual(validateDocument(document).errors, []);
 });
 
 test("validate CLI emits all hard errors as machine-readable JSON", async (context) => {
@@ -252,6 +315,7 @@ test("validate CLI emits all hard errors as machine-readable JSON", async (conte
   assert.equal(response.valid, false);
   assert.deepEqual(response.errors.map((item) => item.code), [
     "E_TITLE_REQUIRED",
+    "E_CALLOUT_REQUIRED",
     "E_RISK_REQUIRED",
     "E_THUMBNAILS_REQUIRED",
     "E_BODY_SECOND_PERSON"

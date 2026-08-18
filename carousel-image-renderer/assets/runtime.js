@@ -38,6 +38,8 @@
   const BRAND_NAME = "智富界";
   const BRAND_TAGLINE = "看懂AI，用好AI，投资AI";
   const AUTHOR_NAME = "李菲特";
+  const CALLOUT_LABEL = "AI观点：";
+  const RISK_LABEL = "AI提示风险：";
 
   function element(tagName, className, html) {
     const node = document.createElement(tagName);
@@ -138,14 +140,13 @@
     }
     if (block.type === "callout") {
       const callout = element("div", "content-block callout-block");
-      const label = (data.meta.callout_label || "AI观点") + "：";
-      callout.appendChild(textElement("strong", "callout-label", label));
+      callout.appendChild(textElement("strong", "callout-label", CALLOUT_LABEL));
       callout.appendChild(element("span", "callout-copy", block.html));
       return callout;
     }
     if (block.type === "risk") {
       const risk = element("div", "content-block risk-block");
-      risk.appendChild(textElement("strong", "risk-label", "AI提示风险："));
+      risk.appendChild(textElement("strong", "risk-label", RISK_LABEL));
       risk.appendChild(element("span", "risk-copy", block.html));
       return risk;
     }

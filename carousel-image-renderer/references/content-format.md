@@ -20,7 +20,6 @@ theme: finance
 - `subtitle`、`kicker`：可选封面文字；kicker 默认“图文报告”。
 - `cover`：保持 `true`。
 - `theme`：`finance` 或 `tech`，默认 `finance`。
-- `callout_label`：可选，覆盖 callout 的默认前缀。
 - `source_pages`：可选正整数，显示原始资料页数。
 
 每个字段只占一行。
@@ -60,7 +59,7 @@ theme: finance
 | `:::lead` | 给出继续阅读的理由。 |
 | `:::metrics` | 并排展示三组以上数据；每行写 `- 标签 \| 值`。 |
 | `:::marker` | 强调一个核心事实或结论。 |
-| `:::callout` | 承载可能影响投资判断的观点。 |
+| `:::callout` | 承载可能影响投资判断的观点；全文至少一个非空块。 |
 | `:::risk` | 承载风险；全文至少一个非空块。 |
 | `:::source` | 说明正文特有的统计口径。 |
 | `:::thumbnails` | 生成原始资料预览导流页。 |

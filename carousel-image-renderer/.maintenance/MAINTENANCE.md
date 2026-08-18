@@ -28,7 +28,7 @@
 | 主题选择 | `references/themes.md` |
 | 3×4 定义与映射 | `references/3x4-methodology.md` |
 | 最终成品审计 | `references/audit-checklist.md` |
-| 防御性否定的审计边界与示例 | `references/defensive-negation-examples.md` |
+| 防御性否定的写作与审计边界 | `references/defensive-negation-examples.md` |
 | 格式、页数、字体、尺寸和渲染硬约束 | `scripts/` 与 `test/` |
 
 运行文件可以简短引用关键约束，但不要复制另一文件的解释、完整规则或实现细节。

@@ -67,6 +67,14 @@ test("fixed author identity uses the bundled square avatar", async () => {
   assert.ok(width >= 512);
 });
 
+test("callout and risk labels are fixed by the renderer", async () => {
+  const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+  const runtime = await fs.readFile(path.join(projectRoot, "assets/runtime.js"), "utf8");
+  assert.match(runtime, /const CALLOUT_LABEL = "AI观点：";/);
+  assert.match(runtime, /const RISK_LABEL = "AI提示风险：";/);
+  assert.doesNotMatch(runtime, /callout_label/);
+});
+
 test("guided endcard requests the bundled QR asset", () => {
   const endcard = resolveEndcardVariant("guided");
   assert.equal(endcard, "guided");
@@ -118,6 +126,10 @@ title: 事务输出测试
 
 第七页是自然结束的末页。
 
+:::callout
+样本仍可用于观察页面诊断行为。
+:::
+
 :::risk
 样本过短，结论可能失真。
 :::
@@ -162,6 +174,10 @@ kicker: 字体与清晰度测试
 ---
 
 正文用于满足格式要求。
+
+:::callout
+清晰层级有助于传递投资叙事。
+:::
 
 :::risk
 样例内容不构成投资建议。

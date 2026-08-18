@@ -487,6 +487,7 @@ export function parseDocument(source) {
     theme: "finance",
     ...suppliedMeta
   };
+  delete meta.callout_label;
   const extracted = extractFootnotes(body);
   const blocks = parseBlocks(extracted.body, meta, extracted.definitions, bodyLineOffset);
   blocks.forEach((block) => {
@@ -497,7 +498,6 @@ export function parseDocument(source) {
   meta.kicker = String(meta.kicker || "图文报告").trim();
   meta.cover = meta.cover !== false;
   meta.theme = String(meta.theme || "finance").trim().toLowerCase();
-  if (meta.callout_label != null) meta.callout_label = String(meta.callout_label).trim();
   meta.titleHtml = parseInline(meta.title);
   meta.subtitleHtml = parseInline(meta.subtitle);
   const wc = countWords(blocks);
@@ -536,6 +536,12 @@ export function validateDocument(document) {
     addError("E_BODY_EMPTY", "The article has no renderable content blocks.", {
       expected: "At least one body content block",
       action: "Add article body content below front matter."
+    });
+  }
+  if (!document.blocks.some((block) => block.type === "callout")) {
+    addError("E_CALLOUT_REQUIRED", "Every carousel must contain at least one non-empty :::callout block.", {
+      expected: "At least one non-empty :::callout directive",
+      action: "Add a concise AI viewpoint grounded in the available evidence."
     });
   }
   if (!document.blocks.some((block) => block.type === "risk")) {
