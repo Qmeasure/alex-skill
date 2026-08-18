@@ -25,25 +25,41 @@ def warning(code, message, **details):
 
 def parse_front_matter(text):
     if not text.startswith("---\n"):
-        return {}, {}, text, 0
+        return {}, {}, text, 0, []
     close = text.find("\n---\n", 4)
     if close == -1:
-        return {}, {}, text, 0
+        return {}, {}, text, 0, [error(
+            "E_FRONT_MATTER_PARSE",
+            "Front matter starts with --- but has no closing --- line.",
+            line=1,
+            actual="---",
+            expected="A closing --- line after the front matter fields",
+            action="Add the closing --- line or remove the opening one.",
+        )]
     meta = {}
     meta_lines = {}
+    findings = []
     for line_number, line in enumerate(text[4:close].split("\n"), start=2):
         line = line.strip()
         if not line or line.startswith("#"):
             continue
         sep = line.find(":")
         if sep == -1:
+            findings.append(error(
+                "E_FRONT_MATTER_PARSE",
+                f"Invalid front matter on line {line_number}: expected key: value.",
+                line=line_number,
+                actual=line,
+                expected="Front matter lines use key: value syntax",
+                action="Fix the line to key: value form or remove it.",
+            ))
             continue
         key = line[:sep].strip()
         value = line[sep + 1:].strip().strip("\"'")
         meta[key] = value
         meta_lines[key] = line_number
     body_start = close + 5
-    return meta, meta_lines, text[body_start:], text[:body_start].count("\n")
+    return meta, meta_lines, text[body_start:], text[:body_start].count("\n"), findings
 
 
 def mask_matches(pattern, text):
@@ -77,9 +93,8 @@ def count_numbers(text):
 
 
 def lint(filepath):
-    text = Path(filepath).read_text(encoding="utf-8").replace("\r\n", "\n")
-    meta, meta_lines, body, body_line_offset = parse_front_matter(text)
-    findings = []
+    text = re.sub(r"\r\n?", "\n", Path(filepath).read_text(encoding="utf-8"))
+    meta, meta_lines, body, body_line_offset, findings = parse_front_matter(text)
     body_no_code = strip_code_blocks(body)
     absolute_line = lambda line: body_line_offset + line
 

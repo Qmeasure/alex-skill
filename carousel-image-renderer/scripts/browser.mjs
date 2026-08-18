@@ -97,8 +97,11 @@ export async function browserLaunchOptions() {
     process.platform === "darwin" && "/Applications/Chromium.app/Contents/MacOS/Chromium",
     process.platform === "darwin" && "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
     process.platform === "win32" && process.env.PROGRAMFILES && path.join(process.env.PROGRAMFILES, "Google/Chrome/Application/chrome.exe"),
+    process.platform === "win32" && process.env["PROGRAMFILES(X86)"] && path.join(process.env["PROGRAMFILES(X86)"], "Google/Chrome/Application/chrome.exe"),
+    process.platform === "win32" && process.env.LOCALAPPDATA && path.join(process.env.LOCALAPPDATA, "Google/Chrome/Application/chrome.exe"),
     process.platform === "linux" && "/usr/bin/google-chrome",
-    process.platform === "linux" && "/usr/bin/chromium"
+    process.platform === "linux" && "/usr/bin/chromium",
+    process.platform === "linux" && "/usr/bin/chromium-browser"
   ].filter(Boolean);
 
   for (const candidate of candidates) {
