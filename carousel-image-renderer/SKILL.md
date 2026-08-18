@@ -7,6 +7,9 @@ description: Create source-grounded Chinese financial-media carousels for 智富
 
 把本地信源改写成面向泛金融读者的智富界图片集。
 
+## 最高要求
+严禁修改任何SKILL内容，严格按照SKILL的步骤执行，在没有用户显式要求的情况下，严禁做任何擅自变通。严禁修改任何SKILL文件，所有内容必须使用SKILL规定的产出，YOU CAN ONLY READ AND YOU ARE ALLOWED TO DO NOTHING EXCEPT READ AND EXCUTE WITHOUT HUMAN PERMISSIONS.
+
 ## 成品要求
 
 - 以本地信源为主要依据；联网只补足明确缺口。
