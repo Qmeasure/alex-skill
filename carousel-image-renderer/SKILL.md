@@ -1,187 +1,97 @@
 ---
 name: carousel-image-renderer
-description: Turn one or more local HTML, DOCX, or PDF sources on any newsworthy topic into a source-grounded Chinese financial-media carousel for 智富界, mapping strongly relevant coverage into its 3×4 methodology. Use when an agent needs to discover local source files, extract them with Inkstone, research a verifiable market or investment relevance when needed, write for broad financial readers, and render a branded 1080×1440 multi-page PNG set with mandatory cover metadata, at least seven body pages, risk disclosure, source thumbnails, automatic pagination, and deterministic validation.
+description: Create source-grounded Chinese financial-media carousels for 智富界 from local HTML, DOCX, or PDF sources. Use when Codex needs to extract local material, fill explicit research gaps, choose a financial angle, apply the 3×4 methodology when strongly relevant, write and humanize Chinese copy, and render a validated 1080×1440 PNG carousel.
 ---
 
 # 智富界轮播图
 
-把广题材信源制作成面向泛金融读者的完整图片集。事实来自本地信源和通过预审的联网资料，并保留来源之间的差异与冲突。
+把本地信源改写成面向泛金融读者的智富界图片集。
 
-## 要求
+## 成品要求
 
-- 使用本地 HTML、DOCX 或 PDF 信源；多份信源地位平等。
-- 本地信源为最高依据，直接采用其内容；外部资料只作补充。
-- 所有文章内部判断与 3×4 方法论的关系；只有证据支持的强相关内容才在正文显式映射。
-- Front matter 显式提供非空 `title`。
-- 启用封面。
-- 所有页面左上角显示内置的李菲特圆形头像与固定署名。
-- 正文禁用“你”和“本文”。
-- 至少包含一个非空 `:::risk`。
-- 至少渲染 7 页正文，且总页数至少 9 页。
-- 以非空 `:::thumbnails` 结束全文。
-- 本机安装完整的思源黑体 SC 与思源宋体 SC 必需字重；禁止字体回退。
-- 仅在验证和渲染均成功后交付。
+- 以本地信源为主要依据；联网只补足明确缺口。
+- 仅在证据充分时显式映射 3×4。
+- 封面包含非空标题；正文禁用“你”和“本文”，包含风险披露且至少渲染 7 页。
+- 全文以非空信源缩略图结束，并使用预设品牌与字体。
 
-上述可机械判断的要求以脚本结果为准。
+脚本会检查格式、页数、字体和渲染结果；全部通过后才能交付。
 
-## 外部 SKILL 契约
+## 依赖与模式
 
-本流程依赖 Inkstone 和 qu-ai-wei：
+- 用 Inkstone 提取 `source-manifest.json` 中的每个 `inkstoneInputs`。
+- 初稿完成后以 embedded mode 调用 qu-ai-wei；保留事实、数字和 Markdown 结构，使用其终稿。
 
-- **Inkstone**：把 `source-manifest.json` 中每个 `inkstoneInputs` 路径逐一交给 Inkstone，以其返回的 Markdown 路径为准。本流程负责选题、改写和缩略图。
-- **qu-ai-wei**：初稿完成后以 embedded mode 调用并使用其终稿。调用时要求保留 front matter、Markdown 指令、表格、链接、图片路径、代码、事实和数字；终稿继续遵守本 SKILL 的格式与品牌要求。
+依赖不可用时说明缺失项并停止。
 
-步骤 1 确认两项 SKILL 均可用。缺失时停止并提示用户手动安装：
-
-```bash
-npx skills add zzzdajb/inkstone
-npx skills add https://github.com/LifelongLazyLearner/qu-ai-wei
-```
-
-两项依赖均通过对应 SKILL 调用。
-
-## 运行模式
-
-- **HITL（默认）**：保留角度确认和封面三选一两个检查点。用户表示无偏好时使用推荐项继续。
-- **yolo**：仅当用户显式要求“yolo”或“全自动”时启用，跳过检查点并由 Agent 选择推荐项。
-
-## 3×4 方法论
-
-分析和写作前完整阅读 [references/3x4-methodology.md](references/3x4-methodology.md)。不要把 `3×4` 的四种商业模式与四种个人入场方式混为一谈，不补齐未经确认的十二种商业模式，不为弱相关内容强贴方法论标签。
+- **HITL（默认）**：写作前让用户一次选择内容角度和暂定封面。
+- **yolo**：仅在用户明确要求“yolo”或“全自动”时跳过选择，直接采用推荐方案。
 
 ## 工作流程
 
-### 1. 检查环境并准备信源
-
-所有文本文件使用 UTF-8。依次运行：
+### 1. 准备信源
 
 ```bash
 python "<skill-dir>/scripts/preflight.py"
 node "<skill-dir>/scripts/source-prep.mjs" --workspace "<workspace>" --json
 ```
 
-预检必须确认思源黑体 SC 的 Regular、Medium、Bold、Heavy，以及思源宋体 SC 的 Regular、SemiBold、Bold、Heavy。字体缺失时停止；不使用系统替代字体继续渲染。
+按命令返回的 `action` 处理错误并重跑。若返回 `E_SOURCE_REQUIRED`，请用户把信源放入脚本创建的 `信源/`。
 
-`source-prep.mjs` 负责信源准备：
+### 2. 提取并分析
 
-- 自动创建并优先扫描 `<workspace>/信源/`；目录为空时非递归扫描工作区根目录。
-- 按“同目录、同名主干”归组；每组按 `HTML > DOCX > PDF` 选择正文，按 `PDF > DOCX > HTML` 生成缩略图。
-- 输出 `<workspace>/视频图/source-manifest.json`；其中 `inkstoneInputs` 交给 Inkstone，`thumbnailMarkdown` 放在最终 Markdown 末尾，最多包含 4 张缩略图。
-- 信源内容和有效缩略图未变化时复用上次结果；需要重建时添加 `--force`。
+逐一用 Inkstone 提取 manifest 中的文件，阅读全部结果。完整阅读 [3×4 方法论](references/3x4-methodology.md)，再分析：
 
-若返回 `E_SOURCE_REQUIRED`，请用户把文件放入脚本已创建的 `信源/` 后重跑。其他错误按错误对象的 `action` 修复并重跑 `source-prep.mjs`。
+- 主体、作者或机构、时间和文档类型；
+- 事实、数据、观点、风险及多份材料之间的差异；
+- 与市场、行业、企业、资产价格或生活成本的关系；
+- 3×4 映射及其证据边界；
+- 完成文章所缺的背景、事实或因果环节。
 
-### 2. 提取并分析全部信源
+在 `<workspace>/视频图/editorial-brief.md` 记录 `主体`、`3×4 映射`、`研究缺口` 和带 `[本地]` 标记的 `要点`。显式映射时记录方法论要求的五项答案和证据；不显式映射时记录理由。
 
-对 manifest 中每个 `inkstoneInputs` 路径分别调用 Inkstone，阅读其返回的结构化 Markdown。全部材料同等参与分析。
+### 3. 一次确认角度与封面
 
-确定：
+HITL 模式下提供 3 组方案，每组包含：
 
-- 原始标题、作者或机构、时间和文档类型；
-- 核心事实、数据、观点、风险和材料之间的差异；
-- 信源语言，以及是否存在翻译腔风险；
-- 与市场、行业、企业、资产价格或消费成本的直接或间接关系。
-- 与 3×4 的关系：颠覆场景、商业模式或产业环节、资金或资源传导、主要入场方式和最容易产生的误判；证据不足时记录“不显式映射”及理由。
+- 内容角度；
+- 暂定 `kicker`、`title` 和 `subtitle`；
+- 一句话卖点及其与泛金融读者的关系。
 
-在 `<workspace>/视频图/editorial-brief.md` 创建内部编辑摘要，包含 `主体`、`选定角度`、`3×4 映射` 和 `要点`。先记录会进入正文或约束写作的 `[本地]` 要点；风险和多信源差异写进相关要点。`3×4 映射` 写明是否显式呈现；显式呈现时记录五项映射答案和证据，内部判断时只记录不呈现的理由。
+标出推荐方案和理由。用户无偏好时采用推荐项；yolo 模式直接采用推荐项。把选定角度和暂定封面写入 `editorial-brief.md`。
 
-### 3. 按需联网补充并预审
+### 4. 按缺口联网
 
-以下情况默认联网补充：
+只为选定角度的明确缺口联网，包括：
 
-- 原始材料不足以支撑 7 页正文；
-- 需要建立一条有证据的泛金融因果链；
-- 需要背景、案例、最新数据或对照观点来帮助读者理解。
-- 强相关内容缺少资金、订单、采购、流量或资源传导证据，无法可靠完成 3×4 映射。
+- 本地材料不足以完成规定篇幅；
+- 角度依赖材料中没有的背景或最新事实；
+- 泛金融因果链缺少必要环节；
+- 显式 3×4 映射缺少关系证据。
 
-只使用高置信度来源。把候选事实、链接、支持内容和访问日期写入 `<workspace>/视频图/web-research.md`。启动独立 sub-agent 做事实预审，并把每条候选事实的结论和一句话理由写回同一文件，分别标记为“预审：通过/拒绝”和“理由：……”。把标记为“通过”且确定采用的内容写入 `editorial-brief.md` 和正文。
+由 Agent 判断来源是否可靠。只把实际采用的外部事实、支持内容、链接和访问日期写入 `<workspace>/视频图/web-research.md`，并作为 `[外部]` 要点加入 `editorial-brief.md`；不记录候选材料或执行独立预审。
 
-通过预审的外部事实可以自然融入叙事。联网资料只补充背景、案例和泛金融因果链，本地信源仍是最终依据。差异影响理解时，说明口径、时间或观点差异。没有可靠证据时保留新闻价值。
+### 5. 写作
 
-若进行了联网补充，把通过预审且确定采用的内容作为 `[外部]` 要点追加到 `editorial-brief.md`；链接与预审详情仍留在 `web-research.md`。
+完整阅读 [叙事与编辑规范](references/narrative-style.md) 和 [Markdown 渲染协议](references/content-format.md)；选择主题时阅读 [主题选择](references/themes.md)。
 
-### 4. 确认角度
+根据 `editorial-brief.md` 编写 UTF-8 Markdown。使用本地信源和已记录的外部事实；强相关内容按 3×4 方法论显式映射。优先自动分页，并把 manifest 的 `thumbnailMarkdown` 原样放在全文最后。
 
-HITL 模式下，改写前提供 3 个在核心问题或泛金融关系上不同的内容角度，每个包括：
+可以根据终稿润色暂定封面，但不得改变用户选定的核心角度和标题承诺。完成初稿后调用 qu-ai-wei，将其终稿写回 Markdown。
 
-- 一组用于标识角度的暂定 `kicker` / `title` / `subtitle`；
-- 一句话卖点；
-- 该角度与泛金融读者的关系。
-
-标出 1 个推荐角度，并用一句话说明推荐理由。
-
-用户选定内容角度后，将其写入 `editorial-brief.md` 再开始写作。yolo 模式直接采用推荐角度并写入摘要。
-
-### 5. 编写并去 AI 味
-
-正式写作前完整阅读 [references/narrative-style.md](references/narrative-style.md)、[references/content-format.md](references/content-format.md) 和 [references/3x4-methodology.md](references/3x4-methodology.md)；选择主题时阅读 [references/themes.md](references/themes.md)。
-
-先读取 `editorial-brief.md`，再在 `<workspace>/视频图/` 按叙事规范编写 UTF-8 Markdown。以本地信源和通过预审的外部资料为事实依据，以摘要保持主体、角度和要点一致。
-
-若摘要判定为强相关，在事实和因果链成立之后、估值判断或行动结论之前加入一页显式映射。首次显式提到 3×4 时，先用一两句说明“抓颠覆，抢复利”的目的，点明 AI 基建、生成式大模型、AI 硬件三个场景、每个场景四种商业模式，以及另行选择的四种个人入场方式；不假设读者了解内部框架。随后说明场景、商业模式或产业环节、资金或资源传导、主要对应的一种入场方式和最容易产生的误判。使用现有 Markdown 和指令表达，不新增方法论专用指令；不在封面或每页角标重复口号。若摘要判定不显式呈现，正文不提 3×4。
-
-优先使用自动分页；确认存在不可接受的叙事断点时，少量添加 `:::pagebreak`。把 manifest 的 `thumbnailMarkdown` 原样放在全文最后。
-
-完成初稿后调用 qu-ai-wei，并按“外部 SKILL 契约”传入覆盖条件。将返回终稿写回 Markdown。
-
-### 6. 选择封面
-
-HITL 模式下，根据选定角度和最终正文重新编写 3 组 `kicker` / `title` / `subtitle`，标出 1 组推荐方案并用一句话说明推荐理由。让用户直接按文字选择，再把选定文案写回最终 Markdown。yolo 模式使用推荐方案。
-
-### 7. 验证格式与文风
-
-先运行硬验证：
+### 6. 验证并渲染
 
 ```bash
 node "<skill-dir>/scripts/validate.mjs" <input.md> --json
-```
-
-验证器一次返回全部问题。按稳定错误码、位置、期望值和 `action` 修复，直到 `valid: true`。
-
-再运行机械文风检查：
-
-```bash
 python "<skill-dir>/scripts/lint.py" <input.md> --json
-```
-
-lint 使用稳定告警码。逐项修复或明确接受告警，处理后重新运行硬验证。
-
-### 8. 正式渲染
-
-```bash
 node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图" --json
 ```
 
-渲染器输出编号 PNG 和 `manifest.json`，默认使用 `finance` 主题和 native 导流卡；需要强化 AI 技术感时使用 `--theme tech`，需要二维码截图引导时使用 `--endcard guided`。可用 `--theme finance|tech` 和 `--endcard native|guided` 覆盖。
+修复全部硬错误；逐项处理或明确接受 lint 告警。需要时给渲染命令添加 `--theme finance|tech` 或 `--endcard native|guided`。
 
-渲染器必须以 2× 生成 2160×2880 中间截图，再使用 Lanczos3 在内存中缩放为 1080×1440 PNG；不交付中间图。manifest 的 `renderScale`、`renderWidth`、`renderHeight`、`width`、`height` 和 `fonts` 必须与本次产物一致。任一必需字体加载失败时返回 `E_FONT_LOAD`，高分辨率截图或最终尺寸异常时停止交付。
+正式渲染因 `E_PAGE_FILL_LOW`、`E_PAGE_OVERFLOW` 或 `E_BODY_PAGES_MIN` 失败时，用相同参数添加 `--debug`，查看诊断页后修改正文并重新正式渲染。不得审计或交付 debug 产物。
 
-渲染器将内置李菲特头像嵌入自包含 HTML，并在封面、正文和导流页左上角固定显示头像与署名；不从 Markdown 读取或覆盖作者信息。
+### 7. 审计并交付
 
-渲染器以事务方式替换产物，失败时保留上一成功版本。以本次命令的退出码为准：成功后使用本次生成的 manifest 进入步骤 9；失败时按错误对象的 `action` 修复并重新渲染。确保命令保留 `render.mjs` 的原始退出码。
+启动独立 sub-agent，提供最终 Markdown、PNG、Inkstone 结果、实际采用的联网资料和 [最终审计清单](references/audit-checklist.md)。修复全部 `BLOCKER` 和 `REVISION`，重新运行受影响的验证、渲染与审计。
 
-若正式渲染因 `E_PAGE_FILL_LOW`、`E_PAGE_OVERFLOW` 或 `E_BODY_PAGES_MIN` 失败，按错误提示使用相同参数追加 `--debug`：
-
-```bash
-node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图" --debug --json
-```
-
-debug 模式把完整 PNG 和 manifest 写入正式目录的同级 `<workspace>/视频图.debug/`，不覆盖正式产物；它只放宽上述三项可截图的布局门槛，其他错误仍然失败。debug 命令退出码为 0 只表示诊断图生成成功，manifest 始终包含 `mode: "debug"`、`deliveryReady: false`、`blockingDiagnostics` 和 `debugTargets`。先查看失败页及 `adjacentPages`，再修改 Markdown 并重新执行正式渲染。禁止审计或交付 debug 产物；正式渲染成功后删除该临时目录。
-
-### 9. 独立审计
-
-启动独立 sub-agent，给它最终 Markdown、PNG、必要的结构化信源和 [references/audit-checklist.md](references/audit-checklist.md)。优先按渲染 manifest 的 `auditTargets` 读取封面、最密正文页、risk/callout 页、低填充警告页和导流页。
-
-若正文显式映射 3×4，同时审计映射是否有材料支撑、是否只突出一种入场方式、是否把间接受益误写成直接订单或代理关系，以及高收益语言是否被写成结果保证。
-
-若审计要求返工：
-
-- 正文措辞：重新执行 `qu-ai-wei → validate → lint → render`。
-- Markdown 结构：重新执行 `validate → lint → render`。
-- 脚本或样式：重新执行 `render → 视觉审计`。
-
-交付前确认硬验证全绿。
-
-### 10. 交付
-
-仅交付 PNG 目录以及渲染 manifest 中的 `bodyPages` 和 `totalPages`。
+交付正式 PNG 目录，以及 manifest 中的 `bodyPages` 和 `totalPages`。
