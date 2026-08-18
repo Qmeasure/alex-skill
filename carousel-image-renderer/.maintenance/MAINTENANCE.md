@@ -15,7 +15,8 @@
 - 联网材料由执行 Agent 判断，只记录实际采用的事实，不设置候选事实预审。
 - 默认只有一次 HITL，同时选择内容角度和暂定封面；yolo 模式跳过。
 - 最终封面可以润色，但不能改变用户选择的角度和标题承诺。
-- 只保留一次独立成品审计，覆盖事实、外部来源、3×4 证据和视觉交付。
+- 并行运行首次读者审计和事实与视觉审计；两个 sub-agent 均不得接收最后一页。
+- 最后一页是渲染器模板，只由验证与渲染流程检查。
 - 3×4 是独立产品规则。普通提示词重构不得改变其定义或映射标准，除非任务明确要求。
 
 ## 权威位置
@@ -29,6 +30,7 @@
 | 3×4 定义与映射 | `references/3x4-methodology.md` |
 | 首次读者上下文关联审计 | `references/context-audit-checklist.md` |
 | 事实、来源、3×4 证据与视觉审计 | `references/audit-checklist.md` |
+| 正文内容用途及禁止案例 | `references/content-purpose-blacklist.md` |
 | 防御性否定的写作与审计边界 | `references/defensive-negation-examples.md` |
 | 格式、页数、字体、尺寸和渲染硬约束 | `scripts/` 与 `test/` |
 
