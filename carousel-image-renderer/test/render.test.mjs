@@ -75,6 +75,18 @@ test("callout and risk labels are fixed by the renderer", async () => {
   assert.doesNotMatch(runtime, /callout_label/);
 });
 
+test("the fixed brand palette has no legacy warm colors or theme switch", async () => {
+  const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+  const css = await fs.readFile(path.join(projectRoot, "assets/theme.css"), "utf8");
+  const runtime = await fs.readFile(path.join(projectRoot, "assets/runtime.js"), "utf8");
+  const renderer = await fs.readFile(path.join(projectRoot, "scripts/render.mjs"), "utf8");
+  assert.match(css, /--accent:\s*#185fa9;/i);
+  assert.doesNotMatch(css, /--gold|--warm-red|data-theme/i);
+  assert.doesNotMatch(css, /#ba8d32|#9c701c|#d5ad59|#ff8a68|rgba\(210,\s*90,\s*50/i);
+  assert.doesNotMatch(runtime, /dataset\.theme/);
+  assert.doesNotMatch(renderer, /--theme/);
+});
+
 test("guided endcard requests the bundled QR asset", () => {
   const endcard = resolveEndcardVariant("guided");
   assert.equal(endcard, "guided");

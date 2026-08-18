@@ -113,14 +113,11 @@ export function buildDebugTargets(pageDetails, diagnostics) {
 }
 
 function parseArguments(argv) {
-  const options = { input: "", output: "", theme: "", endcard: "", json: false, debug: false };
+  const options = { input: "", output: "", endcard: "", json: false, debug: false };
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index];
     if (value === "--output" || value === "-o") {
       options.output = argv[index + 1] || "";
-      index += 1;
-    } else if (value === "--theme") {
-      options.theme = argv[index + 1] || "";
       index += 1;
     } else if (value === "--endcard") {
       options.endcard = argv[index + 1] || "";
@@ -162,7 +159,7 @@ function buildHtml(document, css, runtimeScripts) {
 </html>`;
 }
 
-async function render(inputPath, outputDirectory, themeOverride = "", endcardVariant = "", coverOnly = false, debug = false) {
+async function render(inputPath, outputDirectory, endcardVariant = "", coverOnly = false, debug = false) {
   const endcard = resolveEndcardVariant(endcardVariant);
   const renderedOutputDirectory = debug ? debugOutputDirectoryFor(outputDirectory) : outputDirectory;
   const debugOutputDirectory = debugOutputDirectoryFor(outputDirectory);
@@ -195,7 +192,6 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
   } catch (error) {
     throw diagnosticsError([parseFailure(error)]);
   }
-  if (themeOverride) document.meta.theme = String(themeOverride).trim().toLowerCase();
   if (coverOnly && !document.meta.cover) {
     throw diagnosticError("E_COVER_REQUIRED", "--cover-only cannot run when front matter sets cover: false.", {
       action: "Enable the cover or remove --cover-only."
@@ -371,7 +367,6 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
 
     const manifest = {
       title: plainText(document.meta.title),
-      theme: document.meta.theme,
       endcard,
       coverOnly,
       mode: debug ? "debug" : "formal",
@@ -412,7 +407,7 @@ async function render(inputPath, outputDirectory, themeOverride = "", endcardVar
 async function main() {
   const options = parseArguments(process.argv.slice(2));
   if (options.help) {
-    process.stdout.write("Usage: node render.mjs <input.md> --output <output-dir> [--theme finance|tech] [--endcard native|guided] [--cover-only] [--debug] [--json]\n");
+    process.stdout.write("Usage: node render.mjs <input.md> --output <output-dir> [--endcard native|guided] [--cover-only] [--debug] [--json]\n");
     return;
   }
   if (!options.input || !options.output) {
@@ -421,7 +416,7 @@ async function main() {
   const inputPath = path.resolve(options.input);
   const outputDirectory = path.resolve(options.output);
   const renderedOutputDirectory = options.debug ? debugOutputDirectoryFor(outputDirectory) : outputDirectory;
-  const manifest = await render(inputPath, outputDirectory, options.theme, options.endcard, options.coverOnly, options.debug);
+  const manifest = await render(inputPath, outputDirectory, options.endcard, options.coverOnly, options.debug);
   if (options.json) {
     process.stdout.write(`${JSON.stringify({ ok: true, outputDirectory: renderedOutputDirectory, manifest }, null, 2)}\n`);
   } else {

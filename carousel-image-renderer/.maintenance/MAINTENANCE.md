@@ -15,6 +15,7 @@
 - 联网材料由执行 Agent 判断，只记录实际采用的事实，不设置候选事实预审。
 - 默认只有一次 HITL，同时选择内容角度和暂定封面；yolo 模式跳过。
 - 最终封面可以润色，但不能改变用户选择的角度和标题承诺。
+- 渲染器固定使用蓝、白、近黑一套品牌配色，不向 Agent 或输入稿暴露主题选择。
 - 并行运行上下文关联审计和事实与视觉审计；两个 sub-agent 均不得接收最后一页。
 - 最后一页（末页/endcard）由渲染器模板生成，只由验证与渲染流程检查。
 - `--endcard guided` 是休眠功能：因二维码可能触发平台限流而暂时搁置，故意不写入运行提示词——Agent 不知道就不会自行启用。产品层面重新启用前，维护时不得将其文档化。
@@ -27,7 +28,7 @@
 | 触发条件、运行流程、HITL、联网时机、交付步骤 | `SKILL.md` |
 | 事实边界、封面、叙事和文风 | `references/narrative-style.md` |
 | Markdown、front matter 和自定义指令 | `references/content-format.md` |
-| 主题选择 | `references/themes.md` |
+| 固定品牌配色 | `assets/theme.css` |
 | 3×4 定义与映射 | `references/3x4-methodology.md` |
 | 首次读者上下文关联审计 | `references/context-audit-checklist.md` |
 | 事实、来源、3×4 证据与视觉审计 | `references/audit-checklist.md` |

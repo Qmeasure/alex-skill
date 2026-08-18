@@ -56,7 +56,7 @@ title: 明确标题
   assert.deepEqual(errorCodes(source), []);
 });
 
-test("finance is the default and only finance and tech are supported", () => {
+test("the fixed brand palette rejects legacy theme metadata", () => {
   const base = `---
 title: 主题测试
 ---
@@ -75,14 +75,10 @@ title: 主题测试
 ![](./page-01.png)
 :::
 `;
-  assert.equal(parseDocument(base).meta.theme, "finance");
-  for (const theme of ["finance", "tech"]) {
+  assert.equal(Object.hasOwn(parseDocument(base).meta, "theme"), false);
+  for (const theme of ["finance", "tech", "classic", "editorial"]) {
     const source = base.replace("title: 主题测试", `title: 主题测试\ntheme: ${theme}`);
-    assert.ok(!errorCodes(source).includes("E_THEME_UNSUPPORTED"));
-  }
-  for (const theme of ["classic", "editorial"]) {
-    const source = base.replace("title: 主题测试", `title: 主题测试\ntheme: ${theme}`);
-    assert.ok(errorCodes(source).includes("E_THEME_UNSUPPORTED"));
+    assert.ok(errorCodes(source).includes("E_THEME_REMOVED"));
   }
 });
 

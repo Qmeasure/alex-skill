@@ -1,8 +1,6 @@
 // Markdown 解析与文档校验：把输入 Markdown 解析为渲染文档（meta + blocks）。
 // 纯函数，零外部依赖；被 render.mjs 与 validate.mjs 共同使用。
 
-const SUPPORTED_THEMES = new Set(["finance", "tech"]);
-
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (character) => ({
     "&": "&amp;",
@@ -484,7 +482,6 @@ export function parseDocument(source) {
     subtitle: "",
     kicker: "图文报告",
     cover: true,
-    theme: "finance",
     ...suppliedMeta
   };
   delete meta.callout_label;
@@ -497,7 +494,6 @@ export function parseDocument(source) {
   meta.subtitle = String(meta.subtitle || "").trim();
   meta.kicker = String(meta.kicker || "图文报告").trim();
   meta.cover = meta.cover !== false;
-  meta.theme = String(meta.theme || "finance").trim().toLowerCase();
   meta.titleHtml = parseInline(meta.title);
   meta.subtitleHtml = parseInline(meta.subtitle);
   const wc = countWords(blocks);
@@ -524,11 +520,11 @@ export function validateDocument(document) {
       action: "Remove `cover: false` or set `cover: true`."
     });
   }
-  if (!SUPPORTED_THEMES.has(document.meta.theme)) {
-    addError("E_THEME_UNSUPPORTED", `Unsupported theme "${document.meta.theme}".`, {
+  if (Object.prototype.hasOwnProperty.call(document.meta, "theme")) {
+    addError("E_THEME_REMOVED", "Custom themes are no longer supported.", {
       actual: document.meta.theme,
-      expected: "finance or tech",
-      action: "Set front matter `theme` to one of the supported values."
+      expected: "No `theme` field; the renderer uses the fixed brand palette",
+      action: "Remove front matter `theme`."
     });
   }
   const visibleBlocks = document.blocks.filter((block) => block.type !== "pagebreak");

@@ -12,14 +12,12 @@ title: 一份公司研究
 subtitle: 两个数字，看懂成本变化
 kicker: 公司公告 2026年8月
 cover: true
-theme: finance
 ---
 ```
 
 - `title`：必填，只用于封面，支持行内标记。
 - `subtitle`、`kicker`：可选封面文字；kicker 默认“图文报告”。
 - `cover`：保持 `true`。
-- `theme`：`finance` 或 `tech`，默认 `finance`；渲染命令的 `--theme` 参数覆盖此字段。
 - `source_pages`：可选正整数，显示原始资料页数。
 
 每个字段只占一行。
@@ -35,7 +33,7 @@ theme: finance
 ## 行内标记
 
 ```md
-{accent}橙金色文字{/accent}
+{accent}品牌蓝强调文字{/accent}
 {circle}关键数字{/circle}
 {wavy}手绘下划线{/wavy}
 ==高亮文字==

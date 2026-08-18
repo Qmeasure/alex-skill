@@ -75,7 +75,7 @@ HITL 模式下提供 3 组方案，每组包含：
 
 ### 5. 写作
 
-完整阅读 [叙事与编辑规范](references/narrative-style.md) 和 [Markdown 渲染协议](references/content-format.md)；选择主题时阅读 [主题选择](references/themes.md)。
+完整阅读 [叙事与编辑规范](references/narrative-style.md) 和 [Markdown 渲染协议](references/content-format.md)。
 
 根据 `editorial-brief.md` 编写 UTF-8 Markdown。使用本地信源和已记录的外部事实；强相关内容按 3×4 方法论显式映射。优先自动分页，并把 manifest 的 `thumbnailMarkdown` 原样放在全文最后。
 
@@ -89,7 +89,7 @@ python "<skill-dir>/scripts/lint.py" <input.md> --json
 node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图" --json
 ```
 
-修复全部硬错误和 lint 错误；逐项处理或明确接受 lint 告警。需要时给渲染命令添加 `--theme finance|tech`；该参数覆盖 front matter 的 `theme` 字段。
+修复全部硬错误和 lint 错误；逐项处理或明确接受 lint 告警。
 
 正式渲染因 `E_PAGE_FILL_LOW`、`E_PAGE_OVERFLOW` 或 `E_BODY_PAGES_MIN` 失败时，用相同参数添加 `--debug`，查看诊断页后修改正文并重新正式渲染。不得审计或交付 debug 产物。
 
