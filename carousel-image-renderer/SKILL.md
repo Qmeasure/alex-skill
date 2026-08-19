@@ -42,7 +42,7 @@ node "<skill-dir>/scripts/source-prep.mjs" --workspace "<workspace>" --json
 
 ### 2. 提取并分析
 
-逐一用 Inkstone 提取 manifest 中的文件，阅读全部结果。完整阅读 [3×4 方法论](references/3x4-methodology.md)，再分析：
+逐一用 Inkstone 提取 manifest 中的文件，按 `inkstoneInputs` 顺序把完整结果保存为 `<workspace>/视频图/inkstone-results/01.md`、`02.md`……并阅读全部结果。完整阅读 [3×4 方法论](references/3x4-methodology.md)，再分析：
 
 - 主体、作者或机构、时间和文档类型；
 - 事实、数据、观点、风险及多份材料之间的差异；
@@ -95,13 +95,22 @@ node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图
 
 ### 7. 审计并交付
 
-先准备审计输入副本：从 Markdown 删除 `source_pages` 和末尾 `:::thumbnails` 块，排除最后一张 PNG，并从提供的 manifest 信息中排除 endcard 字段。不得向任何 sub-agent 提供、展示或转述最后一页；原始交付文件保持不变，末页只由验证与渲染流程检查。
+生成两个相互隔离、自包含的审计文件夹：
 
-并行启动两个相互独立的 sub-agent。任务须要求 sub-agent 只报告各自清单明确列出的类别，不得扩展审计范围：
+```bash
+node "<skill-dir>/scripts/prepare-audit.mjs" <input.md> --workspace "<workspace>" --json
+```
 
-- 上下文关联审计：只提供审计用 Markdown 副本、除末页外的正式 PNG 和 [上下文关联审计清单](references/context-audit-checklist.md)，不得提供信源、`editorial-brief.md`、联网资料或前序对话；
-- 事实与视觉审计：提供审计用 Markdown 副本、除末页外的正式 PNG、Inkstone 结果、实际采用的联网资料和 [最终审计清单](references/audit-checklist.md)。
+并行启动两个相互独立的 sub-agent，只把脚本返回的对应文件夹交给它：
 
-只接受两份清单明确列出的审计类别；清单外条目一律无效，不得触发改稿、分页调整、重新渲染、重新审计或阻断交付。汇总并修复其余全部 `BLOCKER` 和 `REVISION`，重新运行受影响的验证、渲染与审计。正文发生修改时必重跑上下文关联审计；若该修改同时涉及事实、来源或视觉，再重跑事实与视觉审计——一次修改可能同时触发两个审计。
+- 上下文关联审计：`完整读取 <contextDirectory>，按照其中 AUDIT.md 审计并输出结果。`
+- 事实、证据与视觉审计：`完整读取 <evidenceDirectory>，按照其中 AUDIT.md 审计并输出结果。`
+
+汇总并成批修复全部 `BLOCKER` 和 `REVISION`，然后重新验证、lint、正式渲染并生成新审计包。按修改影响重跑审计：
+
+- 读者可见文字、顺序、结构、分页或 3×4 解释改变时，重跑上下文关联审计；
+- 事实、来源、3×4 证据、callout、risk、图片、视觉或分页改变时，重跑事实、证据与视觉审计。
+
+未受影响的 `PASS` 保持有效。两项审计均为 `PASS` 后交付；末页只由验证、渲染和审计包脚本处理。
 
 交付正式 PNG 目录，以及 manifest 中的 `bodyPages` 和 `totalPages`。

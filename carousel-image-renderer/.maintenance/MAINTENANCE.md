@@ -16,7 +16,10 @@
 - 默认只有一次 HITL，同时选择内容角度和暂定封面；yolo 模式跳过。
 - 最终封面可以润色，但不能改变用户选择的角度和标题承诺。
 - 渲染器固定使用蓝、白、近黑一套品牌配色，不向 Agent 或输入稿暴露主题选择。
-- 并行运行上下文关联审计和事实与视觉审计；两个 sub-agent 均不得接收最后一页。
+- `scripts/prepare-audit.mjs` 全自动生成上下文审计包和事实、证据与视觉审计包；Main Agent 只把对应文件夹交给两个并行 sub-agent。
+- 两个审计 sub-agent 只定位和解释问题，不提供解决方案、改写或优化建议。
+- 上下文审计只负责首次读者理解与叙事连续性；事实、证据与视觉审计负责事实、来源、3×4 证据、防御性否定、callout/risk 和视觉；同一类别只有一个负责人。
+- 修复后按实际影响重跑审计，未受影响的 `PASS` 保持有效；分页变化同时影响两项审计。
 - 最后一页（末页/endcard）由渲染器模板生成，只由验证与渲染流程检查。
 - `--endcard guided` 是休眠功能：因二维码可能触发平台限流而暂时搁置，故意不写入运行提示词——Agent 不知道就不会自行启用。产品层面重新启用前，维护时不得将其文档化。
 - 3×4 是独立产品规则。普通提示词重构不得改变其定义或映射标准，除非任务明确要求。
@@ -32,10 +35,11 @@
 | 3×4 定义与映射 | `references/3x4-methodology.md` |
 | 首次读者上下文关联审计 | `references/context-audit-checklist.md` |
 | 事实、来源、3×4 证据与视觉审计 | `references/audit-checklist.md` |
-| 防御性否定的判断示例 | `references/defensive-negation-examples.md`（写作规范在 narrative-style.md，审计口径在 audit-checklist.md） |
+| 防御性否定的写作判断示例 | `references/defensive-negation-examples.md`（写作规范在 narrative-style.md，审计口径在 audit-checklist.md） |
+| 审计包构建、隔离与清洗 | `scripts/prepare-audit.mjs` 与 `test/audit-prep.test.mjs` |
 | 格式、页数、字体、尺寸和渲染硬约束 | `scripts/` 与 `test/` |
 
-运行文件可以简短引用关键约束，但不要复制另一文件的解释、完整规则或实现细节。非权威文件只引用权威文件，不复述规则细节；唯一例外是两份审计清单——它们独立分发给 sub-agent，可以逐字复制权威原文，但不得改写，且修改权威文件时必须同步核对清单中的副本。
+运行文件可以简短引用关键约束，但不要复制另一文件的解释、完整规则或实现细节。非权威文件只引用权威文件，不复述规则细节。
 
 ## 修改检查
 
@@ -53,8 +57,8 @@
 
 ```bash
 python "<skill-creator-dir>/scripts/quick_validate.py" .  # 外部 skill-creator 技能的脚本，不在本仓库
-node --test test/validation.test.mjs
+node --test test/audit-prep.test.mjs
 npm run check
 ```
 
-提示词发生实质变化时，再用一个真实任务做独立前向检查，观察 Agent 是否能找到信源、只做缺口驱动联网、停顿一次并完成验证与审计。
+审计提示或审计包契约发生实质变化时，把真实生成的两个文件夹分别交给两个独立 sub-agent，检查它们能否只凭文件夹完成各自审计并按约定格式只报告问题。

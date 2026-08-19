@@ -4,7 +4,7 @@
   "description": "Render source-grounded Chinese financial-media carousels as 1080x1440 PNG cards.",
   "scripts": {
     "test": "node --test",
-    "check": "node --check scripts/parser.mjs && node --check scripts/validate.mjs && node --check scripts/render.mjs && node --check scripts/source-prep.mjs && node --check assets/runtime.js"
+    "check": "node --check scripts/parser.mjs && node --check scripts/validate.mjs && node --check scripts/render.mjs && node --check scripts/source-prep.mjs && node --check scripts/prepare-audit.mjs && node --check assets/runtime.js"
   },
   "keywords": [],
   "author": "",
