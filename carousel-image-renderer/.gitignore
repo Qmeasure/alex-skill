@@ -1,3 +1,4 @@
 /preview/
 /design-qa.md
 *.debug/
+!AGENTS.md
