@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { buildAuditTargets, buildBodyPageCountDiagnostics, qrAssetPathFor, resolveEndcardVariant } from "../scripts/render.mjs";
+import { buildBodyPageCountDiagnostics, qrAssetPathFor, resolveEndcardVariant } from "../scripts/render.mjs";
 
 function runNode(args, cwd) {
   return new Promise((resolve, reject) => {
@@ -18,24 +18,6 @@ function runNode(args, cwd) {
     child.on("close", (code) => resolve({ code, stdout, stderr }));
   });
 }
-
-test("audit targets identify the pages that need visual review", () => {
-  const targets = buildAuditTargets([
-    { file: "01-cover.png", kind: "cover", features: [] },
-    { file: "02-page.png", kind: "body", fill: 0.78, lastBody: false, features: ["callout"] },
-    { file: "03-page.png", kind: "body", fill: 0.92, lastBody: false, features: ["risk", "table"] },
-    { file: "04-page.png", kind: "body", fill: 0.72, lastBody: false, features: [] },
-    { file: "05-page.png", kind: "endcard", features: [] }
-  ]);
-  assert.deepEqual(targets, {
-    cover: "01-cover.png",
-    densestBody: "03-page.png",
-    riskPages: ["03-page.png"],
-    calloutPages: ["02-page.png"],
-    fillWarningPages: ["04-page.png"],
-    endcard: "05-page.png"
-  });
-});
 
 test("body-page limits accept the inclusive range and reject both boundaries", () => {
   assert.equal(buildBodyPageCountDiagnostics(6, 8)[0]?.code, "E_BODY_PAGES_MIN");
@@ -122,7 +104,7 @@ test("debug render exposes blocking layout pages without replacing formal output
 title: 事务输出测试
 ---
 
-第一页内容很短。
+第一页内容很短，包含 ![示意图](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAEAQH/XPWsWQAAAABJRU5ErkJggg==)。
 
 :::pagebreak
 
@@ -179,6 +161,10 @@ title: 事务输出测试
   assert.equal(debugResponse.manifest.deliveryReady, false);
   assert.ok(debugResponse.manifest.blockingDiagnostics.some((item) => item.code === "E_PAGE_FILL_LOW"));
   assert.ok(debugResponse.manifest.debugTargets.fillErrorPages.length > 0);
+  const firstBody = debugResponse.manifest.pageDetails.find((page) => page.kind === "body");
+  assert.match(firstBody.text, /第一页内容很短/);
+  assert.ok(firstBody.features.includes("image"));
+  assert.ok(firstBody.visualRegions.some((region) => region.kind === "content-image" && region.width > 0 && region.height > 0));
   await fs.access(path.join(debugDirectory, debugResponse.manifest.debugTargets.fillErrorPages[0]));
   assert.equal(await fs.readFile(path.join(outputDirectory, "01-cover.png"), "utf8"), "previous-image");
   assert.deepEqual(JSON.parse(await fs.readFile(path.join(outputDirectory, "manifest.json"), "utf8")), { previous: true });
@@ -222,6 +208,9 @@ kicker: 字体与清晰度测试
   assert.equal(response.manifest.fonts.sans, "Source Han Sans SC");
   assert.equal(response.manifest.fonts.serif, "Source Han Serif SC");
   assert.equal(response.manifest.fonts.loadedFaces.length, 8);
+  assert.match(response.manifest.pageDetails[0].text, /字体与清晰度测试\nAI投资叙事\n用清晰的字体层级讲明白产业变化/);
+  assert.doesNotMatch(response.manifest.pageDetails[0].text, /李菲特|智富界/);
+  assert.deepEqual(response.manifest.pageDetails[0].visualRegions.map((region) => region.kind), ["cover-content"]);
 
   const png = await fs.readFile(path.join(outputDirectory, "01-cover.png"));
   assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [1080, 1440]);

@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import sharp from "sharp";
 import { diagnosticError, diagnosticsFromError, formatDiagnostic } from "./diagnostics.mjs";
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
@@ -57,55 +58,64 @@ export function sanitizeAuditMarkdown(source) {
   return cleaned;
 }
 
-function auditPageDetail(detail) {
-  return {
-    page: detail.page,
-    kind: detail.kind,
-    label: detail.label || "",
-    features: Array.isArray(detail.features) ? detail.features : [],
-    file: detail.file,
-    ...(detail.fill != null ? { fill: detail.fill } : {}),
-    ...(detail.lastBody != null ? { lastBody: detail.lastBody } : {})
-  };
+function buildPagesMarkdown(visiblePages) {
+  const sections = visiblePages.map((page) => {
+    const text = typeof page.text === "string" ? page.text.trim() : "";
+    if (!text) {
+      throw diagnosticError("E_AUDIT_PAGE_TEXT", "A rendered page has no extractable visible text.", {
+        page: page.page,
+        actual: page.file,
+        expected: "Re-render with the current renderer before preparing audit packages"
+      });
+    }
+    const kind = page.kind === "cover" ? "封面" : "正文";
+    return `## 第 ${page.page} 页｜${kind}\n\n${text}`;
+  });
+  return `# 渲染后逐页文字\n\n${sections.join("\n\n")}\n`;
 }
 
-function auditTargets(targets = {}, visibleFiles) {
-  const keepOne = (value) => typeof value === "string" && visibleFiles.has(value) ? value : "";
-  const keepMany = (value) => Array.isArray(value) ? value.filter((file) => visibleFiles.has(file)) : [];
-  return {
-    cover: keepOne(targets.cover),
-    densestBody: keepOne(targets.densestBody),
-    riskPages: keepMany(targets.riskPages),
-    calloutPages: keepMany(targets.calloutPages),
-    fillWarningPages: keepMany(targets.fillWarningPages)
-  };
-}
-
-function buildAuditManifest(renderManifest, visiblePages) {
-  const pageDetails = visiblePages.map(auditPageDetail);
-  const files = pageDetails.map((detail) => detail.file);
-  const visibleFiles = new Set(files);
-  return {
-    title: renderManifest.title || "",
-    mode: "formal",
-    deliveryReady: true,
-    pages: files.length,
-    bodyPages: pageDetails.filter((detail) => detail.kind === "body").length,
-    files,
-    pageDetails,
-    auditTargets: auditTargets(renderManifest.auditTargets, visibleFiles)
-  };
-}
-
-async function writeCommonPackage(directory, checklist, article, manifest, pages, renderDirectory) {
-  const pagesDirectory = path.join(directory, "pages");
-  await fs.mkdir(pagesDirectory, { recursive: true });
-  await Promise.all([
-    fs.writeFile(path.join(directory, "AUDIT.md"), checklist, "utf8"),
-    fs.writeFile(path.join(directory, "article.md"), article, "utf8"),
-    fs.writeFile(path.join(directory, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, "utf8"),
-    ...pages.map((page) => fs.copyFile(path.join(renderDirectory, page.file), path.join(pagesDirectory, page.file)))
-  ]);
+function buildVisualCrops(visiblePages, width, height) {
+  const crops = [];
+  for (const page of visiblePages) {
+    const expectedKind = page.kind === "cover" ? "cover-content" : "content-image";
+    const regions = Array.isArray(page.visualRegions)
+      ? page.visualRegions.filter((region) => region.kind === expectedKind)
+      : [];
+    const needsRegions = page.kind === "cover" || (
+      page.kind === "body" && Array.isArray(page.features) && page.features.includes("image")
+    );
+    if (needsRegions && !regions.length) {
+      throw diagnosticError("E_AUDIT_VISUAL_REGION", "A visual audit target has no extractable content region.", {
+        page: page.page,
+        actual: page.file,
+        expected: "Re-render with the current renderer before preparing audit packages"
+      });
+    }
+    regions.forEach((region, index) => {
+      const values = [region.x, region.y, region.width, region.height];
+      const valid = values.every((value) => Number.isInteger(value) && value >= 0)
+        && region.width > 0 && region.height > 0
+        && region.x + region.width <= width && region.y + region.height <= height;
+      if (!valid) {
+        throw diagnosticError("E_AUDIT_VISUAL_REGION", "A visual audit region is outside the rendered page.", {
+          page: page.page,
+          actual: JSON.stringify(region),
+          expected: `${width}x${height} page bounds`
+        });
+      }
+      const pagePrefix = String(page.page).padStart(2, "0");
+      const output = page.kind === "cover"
+        ? `${pagePrefix}-cover-content.png`
+        : `${pagePrefix}-image-${String(index + 1).padStart(2, "0")}.png`;
+      crops.push({
+        source: page.file,
+        output,
+        extract: { left: region.x, top: region.y, width: region.width, height: region.height },
+        padding: page.kind === "cover" ? 24 : 0
+      });
+    });
+  }
+  return crops;
 }
 
 export async function prepareAuditPackages({ inputPath, workspace }) {
@@ -158,6 +168,8 @@ export async function prepareAuditPackages({ inputPath, workspace }) {
       });
     }
   }
+  const pagesMarkdown = buildPagesMarkdown(visiblePages);
+  const visualCrops = buildVisualCrops(visiblePages, renderManifest.width, renderManifest.height);
 
   const sourceManifest = await readJson(sourceManifestPath, "E_AUDIT_SOURCE_MANIFEST");
   const inkstoneInputs = Array.isArray(sourceManifest.inkstoneInputs) ? sourceManifest.inkstoneInputs : [];
@@ -186,12 +198,15 @@ export async function prepareAuditPackages({ inputPath, workspace }) {
       expected: expectedResults.join(", ")
     });
   }
+  const sourceIndex = expectedResults.map((result, index) => ({
+    input: path.basename(String(inkstoneInputs[index])),
+    result
+  }));
 
   const [contextChecklist, evidenceChecklist] = await Promise.all([
     fs.readFile(path.join(SKILL_DIR, "references/context-audit-checklist.md"), "utf8"),
     fs.readFile(path.join(SKILL_DIR, "references/audit-checklist.md"), "utf8")
   ]);
-  const auditManifest = buildAuditManifest(renderManifest, visiblePages);
   await fs.mkdir(resolvedWorkspace, { recursive: true });
   const stagingRoot = await fs.mkdtemp(path.join(resolvedWorkspace, ".audit-packages-staging-"));
   let committed = false;
@@ -199,20 +214,34 @@ export async function prepareAuditPackages({ inputPath, workspace }) {
   try {
     const contextDirectory = path.join(stagingRoot, "context");
     const evidenceDirectory = path.join(stagingRoot, "evidence");
-    await Promise.all([
-      writeCommonPackage(contextDirectory, contextChecklist, article, auditManifest, visiblePages, renderDirectory),
-      writeCommonPackage(evidenceDirectory, evidenceChecklist, article, auditManifest, visiblePages, renderDirectory)
-    ]);
-
     const sourcesDirectory = path.join(evidenceDirectory, "sources");
-    await fs.mkdir(sourcesDirectory, { recursive: true });
-    const sourceIndex = expectedResults.map((result, index) => ({
-      input: path.basename(String(inkstoneInputs[index])),
-      result
-    }));
+    const visualDirectory = path.join(evidenceDirectory, "visual");
     await Promise.all([
+      fs.mkdir(contextDirectory, { recursive: true }),
+      fs.mkdir(sourcesDirectory, { recursive: true }),
+      fs.mkdir(visualDirectory, { recursive: true })
+    ]);
+    await Promise.all([
+      fs.writeFile(path.join(contextDirectory, "AUDIT.md"), contextChecklist, "utf8"),
+      fs.writeFile(path.join(contextDirectory, "pages.md"), pagesMarkdown, "utf8"),
+      fs.writeFile(path.join(evidenceDirectory, "AUDIT.md"), evidenceChecklist, "utf8"),
+      fs.writeFile(path.join(evidenceDirectory, "article.md"), article, "utf8"),
+      fs.writeFile(path.join(evidenceDirectory, "pages.md"), pagesMarkdown, "utf8"),
       fs.writeFile(path.join(sourcesDirectory, "index.json"), `${JSON.stringify(sourceIndex, null, 2)}\n`, "utf8"),
-      ...expectedResults.map((file) => fs.copyFile(path.join(inkstoneDirectory, file), path.join(sourcesDirectory, file)))
+      ...expectedResults.map((file) => fs.copyFile(path.join(inkstoneDirectory, file), path.join(sourcesDirectory, file))),
+      ...visualCrops.map((crop) => {
+        let pipeline = sharp(path.join(renderDirectory, crop.source)).extract(crop.extract);
+        if (crop.padding) {
+          pipeline = pipeline.extend({
+            top: crop.padding,
+            bottom: crop.padding,
+            left: crop.padding,
+            right: crop.padding,
+            background: "#f5f7fa"
+          });
+        }
+        return pipeline.png().toFile(path.join(visualDirectory, crop.output));
+      })
     ]);
     try {
       await fs.copyFile(webResearchPath, path.join(evidenceDirectory, "web-research.md"));
@@ -233,6 +262,7 @@ export async function prepareAuditPackages({ inputPath, workspace }) {
     evidenceDirectory: path.join(outputRoot, "evidence"),
     pages: visiblePages.length,
     sources: inkstoneInputs.length,
+    visualFiles: visualCrops.map((crop) => crop.output),
     webResearch
   };
 }

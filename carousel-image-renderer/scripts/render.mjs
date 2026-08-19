@@ -73,19 +73,6 @@ export function qrAssetPathFor(endcard) {
   return endcard === "guided" ? path.join(SKILL_DIR, "assets/zhifujie-qr.png") : null;
 }
 
-export function buildAuditTargets(pageDetails) {
-  const body = pageDetails.filter((page) => page.kind === "body");
-  const densestBody = body.reduce((best, page) => !best || (page.fill ?? -1) > (best.fill ?? -1) ? page : best, null);
-  return {
-    cover: pageDetails.find((page) => page.kind === "cover")?.file || "",
-    densestBody: densestBody?.file || "",
-    riskPages: body.filter((page) => page.features.includes("risk")).map((page) => page.file),
-    calloutPages: body.filter((page) => page.features.includes("callout")).map((page) => page.file),
-    fillWarningPages: body.filter((page) => !page.lastBody && page.fill < FILL_WARNING_THRESHOLD).map((page) => page.file),
-    endcard: pageDetails.find((page) => page.kind === "endcard")?.file || ""
-  };
-}
-
 export function debugOutputDirectoryFor(outputDirectory) {
   return `${path.resolve(outputDirectory)}.debug`;
 }
@@ -359,14 +346,45 @@ async function render(inputPath, outputDirectory, endcardVariant = "", coverOnly
         ["risk", ".risk-block"],
         ["callout", ".callout-block"],
         ["table", ".markdown-table"],
-        ["image", ".markdown-image"],
+        ["image", ".markdown-image, .inline-markdown-image"],
         ["metrics", ".metrics"]
       ].filter(([, selector]) => card.querySelector(selector)).map(([name]) => name);
+      const textNodes = kind === "cover"
+        ? [...card.querySelectorAll(".cover-kicker, .cover-title, .cover-subtitle")]
+        : kind === "body" ? [card.querySelector(".page-flow")].filter(Boolean) : [];
+      const text = textNodes
+        .map((node) => node.innerText || node.textContent || "")
+        .join("\n")
+        .replace(/\r\n?/g, "\n")
+        .replace(/[ \t]+/g, " ")
+        .replace(/ *\n */g, "\n")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+      const cardRect = card.getBoundingClientRect();
+      const regionNodes = kind === "cover"
+        ? [["cover-content", card.querySelector(".cover-main")]]
+        : kind === "body"
+          ? [...card.querySelectorAll(".markdown-image, .inline-markdown-image")].map((node) => ["content-image", node])
+          : [];
+      const visualRegions = regionNodes.filter(([, node]) => node).map(([regionKind, node]) => {
+        const rect = node.getBoundingClientRect();
+        const x = Math.max(0, Math.floor(rect.left - cardRect.left));
+        const y = Math.max(0, Math.floor(rect.top - cardRect.top));
+        return {
+          kind: regionKind,
+          x,
+          y,
+          width: Math.min(cardRect.width - x, Math.ceil(rect.right - cardRect.left) - x),
+          height: Math.min(cardRect.height - y, Math.ceil(rect.bottom - cardRect.top) - y)
+        };
+      }).filter((region) => region.width > 0 && region.height > 0);
       return {
         page: index + 1,
         kind,
         label: (labelNode?.textContent || "").replace(/\s+/g, " ").trim().slice(0, 120),
-        features
+        features,
+        text,
+        visualRegions
       };
     }));
     const fills = new Map((report.fillRatios || []).map((entry) => [entry.page, entry]));
@@ -403,7 +421,6 @@ async function render(inputPath, outputDirectory, endcardVariant = "", coverOnly
       },
       files,
       pageDetails,
-      auditTargets: buildAuditTargets(pageDetails),
       ...(debug ? { debugTargets: buildDebugTargets(pageDetails, renderErrors) } : {}),
       fillRatios: report.fillRatios || [],
       warnings: validation.warnings,

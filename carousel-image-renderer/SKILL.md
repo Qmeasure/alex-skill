@@ -101,6 +101,8 @@ node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图
 node "<skill-dir>/scripts/prepare-audit.mjs" <input.md> --workspace "<workspace>" --json
 ```
 
+上下文审计包只包含正式渲染后的逐页可见文字；事实、证据与视觉审计包只提供封面标题内容区和正文内容图片的裁剪图，不提供整页 PNG。
+
 并行启动两个相互独立的 sub-agent，只把脚本返回的对应文件夹交给它：
 
 - 上下文关联审计：`完整读取 <contextDirectory>，按照其中 AUDIT.md 审计并输出结果。`
