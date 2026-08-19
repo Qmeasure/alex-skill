@@ -6,6 +6,7 @@
   --paper-top: #ffffff;
   --ink: #111827;
   --body-ink: #1f2937;
+  --body-strong-ink: #006aef;
   --strong-ink: #0b1628;
   --heading-ink: #102a43;
   --soft-ink: #334155;
@@ -148,7 +149,7 @@ html, body {
 .list-block strong,
 .quote-block strong,
 .markdown-table strong {
-  color: var(--strong-ink);
+  color: var(--body-strong-ink);
   font-weight: 850;
 }
 
