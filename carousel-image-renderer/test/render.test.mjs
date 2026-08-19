@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { buildAuditTargets, qrAssetPathFor, resolveEndcardVariant } from "../scripts/render.mjs";
+import { buildAuditTargets, buildBodyPageCountDiagnostics, qrAssetPathFor, resolveEndcardVariant } from "../scripts/render.mjs";
 
 function runNode(args, cwd) {
   return new Promise((resolve, reject) => {
@@ -35,6 +35,16 @@ test("audit targets identify the pages that need visual review", () => {
     fillWarningPages: ["04-page.png"],
     endcard: "05-page.png"
   });
+});
+
+test("body-page limits accept the inclusive range and reject both boundaries", () => {
+  assert.equal(buildBodyPageCountDiagnostics(6, 8)[0]?.code, "E_BODY_PAGES_MIN");
+  assert.deepEqual(buildBodyPageCountDiagnostics(7, 9), []);
+  assert.deepEqual(buildBodyPageCountDiagnostics(16, 18), []);
+  const maximum = buildBodyPageCountDiagnostics(17, 19);
+  assert.equal(maximum[0]?.code, "E_BODY_PAGES_MAX");
+  assert.match(maximum[0]?.expected || "", /At most 16 body pages, 18 total pages/);
+  assert.deepEqual(buildBodyPageCountDiagnostics(0, 1, { coverOnly: true }), []);
 });
 
 test("audit prompts enforce a closed visual-review scope", async () => {

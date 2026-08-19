@@ -24,8 +24,9 @@ const RENDER_HEIGHT = PAGE_HEIGHT * RENDER_SCALE;
 // 低于 FILL_ERROR_THRESHOLD 渲染失败，低于 FILL_WARNING_THRESHOLD 打警告（可能是不可拆块进位，需自查）。
 const FILL_ERROR_THRESHOLD = 0.7;
 const FILL_WARNING_THRESHOLD = 0.75;
-// 内容量下限：封面与导流页固定占用 2 页，正文少于此值（总页数 ≤ 8）视为内容量不足。
+// 页数硬约束：封面与导流页固定占用 2 页，正文必须落在允许区间内。
 const MIN_BODY_PAGES = 7;
+const MAX_BODY_PAGES = 16;
 const SUPPORTED_ENDCARD_VARIANTS = new Set(["native", "guided"]);
 
 export async function downsampleScreenshot(png) {
@@ -87,6 +88,27 @@ export function buildAuditTargets(pageDetails) {
 
 export function debugOutputDirectoryFor(outputDirectory) {
   return `${path.resolve(outputDirectory)}.debug`;
+}
+
+export function buildBodyPageCountDiagnostics(bodyPages, totalPages, { coverOnly = false, debugAction = "" } = {}) {
+  if (coverOnly) return [];
+  const debugSuffix = debugAction ? ` ${debugAction}` : "";
+  const errors = [];
+  if (bodyPages < MIN_BODY_PAGES) {
+    errors.push(diagnostic("E_BODY_PAGES_MIN", "The carousel does not meet the minimum body-page count.", {
+      actual: `${bodyPages} body page(s), ${totalPages} total page(s)`,
+      expected: `At least ${MIN_BODY_PAGES} body pages, ${MIN_BODY_PAGES + 2} total pages`,
+      action: `Use unused source facts first, then add audited web research if needed; expand and re-render without padding or repetition.${debugSuffix}`
+    }));
+  }
+  if (bodyPages > MAX_BODY_PAGES) {
+    errors.push(diagnostic("E_BODY_PAGES_MAX", "The carousel exceeds the maximum body-page count.", {
+      actual: `${bodyPages} body page(s), ${totalPages} total page(s)`,
+      expected: `At most ${MAX_BODY_PAGES} body pages, ${MAX_BODY_PAGES + 2} total pages`,
+      action: `Remove redundant or lower-priority material, combine adjacent complete ideas, and re-render; do not shrink text or remove the cover or endcard.${debugSuffix}`
+    }));
+  }
+  return errors;
 }
 
 export function buildDebugTargets(pageDetails, diagnostics) {
@@ -312,15 +334,9 @@ async function render(inputPath, outputDirectory, endcardVariant = "", coverOnly
       })));
     }
 
-    // 内容量下限检查（--cover-only 跳过）：正文页数 = fillRatios 条数（导流页不计入）。
+    // 页数范围检查（--cover-only 跳过）：正文页数 = fillRatios 条数（封面与导流页不计入）。
     const bodyPages = (report.fillRatios || []).length;
-    if (!coverOnly && bodyPages < MIN_BODY_PAGES) {
-      renderErrors.push(diagnostic("E_BODY_PAGES_MIN", "The carousel does not meet the required body-page count.", {
-        actual: `${bodyPages} body page(s), ${report.pageCount} total page(s)`,
-        expected: `${MIN_BODY_PAGES} body pages, ${MIN_BODY_PAGES + 2} total pages`,
-        action: `Use unused source facts first, then add audited web research if needed; expand and re-render without padding or repetition. ${debugAction}`
-      }));
-    }
+    renderErrors.push(...buildBodyPageCountDiagnostics(bodyPages, report.pageCount, { coverOnly, debugAction }));
     if (renderErrors.length && !debug) throw diagnosticsError(renderErrors);
 
     const cards = page.locator(".page-card");
