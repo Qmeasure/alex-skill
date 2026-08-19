@@ -15,11 +15,13 @@
 - 联网材料由执行 Agent 判断，只记录实际采用的事实，不设置候选事实预审。
 - 默认只有一次 HITL，同时选择内容角度和暂定封面；yolo 模式跳过。
 - 最终封面可以润色，但不能改变用户选择的角度和标题承诺。
+- Main Agent 起草前必须重申 AIGC 风格关键约束；独立 AIGC 风格 sub-agent 负责以 qu-ai-wei embedded mode 清理初稿，并在每批审计修订后执行最终文字，Main Agent 只决定修改要求和验收结果。
+- AIGC 风格 sub-agent 只接收当前 Markdown 和 Main Agent 批准后的修改要求，不读取信源或原始审计报告；每篇最多调用三次，没有读者可见文字修改时不调用。
 - 渲染器固定使用蓝、白、近黑一套品牌配色，不向 Agent 或输入稿暴露主题选择。
 - `scripts/prepare-audit.mjs` 全自动生成上下文审计包和事实、证据与视觉审计包；首轮 Main Agent 只把对应文件夹交给两个并行 sub-agent。
 - 两个审计 sub-agent 只定位和解释实质问题，不提供解决方案、改写、优化建议或交付结论；所有输出都只是建议，由 Main Agent 独立裁决。
 - 上下文审计的成品依据只包括渲染后逐页可见文字，负责首次读者理解与叙事连续性。
-- 事实、证据与视觉审计负责事实、来源、3×4 证据、防御性否定和 callout/risk；视觉只检查封面层级和正文内容图片相关性。
+- 事实、证据与视觉审计负责事实、来源、3×4 证据和 callout/risk；视觉只检查封面层级和正文内容图片相关性，AIGC 风格由独立编辑 sub-agent 负责。
 - overflow、坏图、字体加载、尺寸、页序和填充率由渲染器与脚本检查，不重复交给逐篇 LLM 审计。
 - 审计包只向事实、证据与视觉 sub-agent 提供封面标题内容区和正文内容图片的裁剪图，不暴露整页模板；同一类别只有一个负责人。
 - 审计最多两轮：第一轮完整双审，第二轮只按修改影响复审已处理问题、直接回归和新增重大风险；未受影响的审计不重跑，分页变化同时影响两项审计。
@@ -39,7 +41,7 @@
 | 3×4 定义与映射 | `references/3x4-methodology.md` |
 | 首次读者上下文关联审计 | `references/context-audit-checklist.md` |
 | 事实、来源、3×4 证据与视觉审计 | `references/audit-checklist.md` |
-| 防御性否定的写作判断示例 | `references/defensive-negation-examples.md`（写作规范在 narrative-style.md，审计口径在 audit-checklist.md） |
+| AIGC 风格与防御性废话 | 写作规范在 `references/narrative-style.md`，判断示例在 `references/defensive-negation-examples.md` |
 | 审计包构建、隔离与清洗 | `scripts/prepare-audit.mjs` 与 `test/audit-prep.test.mjs` |
 | 格式、页数、字体、尺寸和渲染硬约束 | `scripts/` 与 `test/` |
 
@@ -66,3 +68,5 @@ npm run check
 ```
 
 审计提示或审计包契约发生实质变化时，把真实生成的两个文件夹分别交给两个独立 sub-agent，检查上下文包不含图片、事实与视觉包只含限定图片，并确认两者能只凭文件夹按约定格式报告建议，不作修改、交付或严重度的最终裁决。
+
+AIGC 风格提示或编排发生实质变化时，把一份真实 AI 初稿交给全新上下文的 sub-agent，确认它调用 qu-ai-wei、清理无信息量的防御性表达、保留事实与 Markdown，并只返回完整终稿。
