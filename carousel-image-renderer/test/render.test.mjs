@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { buildBodyPageCountDiagnostics, qrAssetPathFor, resolveEndcardVariant } from "../scripts/render.mjs";
+import { buildBodyPageCountDiagnostics, qrAssetPathFor, resolveEndcardVariant, resolveStyleVariant } from "../scripts/render.mjs";
 
 function runNode(args, cwd) {
   return new Promise((resolve, reject) => {
@@ -67,21 +67,42 @@ test("callout and risk labels are fixed by the renderer", async () => {
   assert.doesNotMatch(runtime, /callout_label/);
 });
 
-test("the fixed brand palette has no legacy warm colors or theme switch", async () => {
+test("old and new styles keep their fixed palette contracts", async () => {
   const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-  const css = await fs.readFile(path.join(projectRoot, "assets/theme.css"), "utf8");
+  const oldCss = await fs.readFile(path.join(projectRoot, "assets/theme.css"), "utf8");
+  const newCss = await fs.readFile(path.join(projectRoot, "assets/theme-new.css"), "utf8");
   const runtime = await fs.readFile(path.join(projectRoot, "assets/runtime.js"), "utf8");
   const renderer = await fs.readFile(path.join(projectRoot, "scripts/render.mjs"), "utf8");
-  assert.match(css, /--accent:\s*#185fa9;/i);
-  assert.match(css, /--body-strong-ink:\s*#006aef;/i);
-  assert.match(css, /\.metric-value\s*\{[^}]*color:\s*var\(--accent\);/is);
-  assert.match(css, /\.callout-label\s*\{[^}]*color:\s*var\(--accent\);/is);
-  assert.match(css, /\.risk-block\s*\{[^}]*border-left:\s*5px solid var\(--accent\);/is);
-  assert.match(css, /\.risk-label\s*\{[^}]*color:\s*var\(--accent\);/is);
-  assert.doesNotMatch(css, /--gold|--warm-red|data-theme/i);
-  assert.doesNotMatch(css, /#ba8d32|#9c701c|#d5ad59|#ff8a68|rgba\(210,\s*90,\s*50/i);
+  assert.match(oldCss, /--accent:\s*#185fa9;/i);
+  assert.match(oldCss, /--body-strong-ink:\s*#006aef;/i);
+  assert.match(oldCss, /\.metric-value\s*\{[^}]*color:\s*var\(--accent\);/is);
+  assert.match(oldCss, /\.callout-label\s*\{[^}]*color:\s*var\(--accent\);/is);
+  assert.match(oldCss, /\.risk-block\s*\{[^}]*border-left:\s*5px solid var\(--accent\);/is);
+  assert.match(oldCss, /\.risk-label\s*\{[^}]*color:\s*var\(--accent\);/is);
+  assert.match(newCss, /--accent:\s*#9fe600;/i);
+  assert.match(newCss, /--accent-deep:\s*#416500;/i);
+  assert.match(newCss, /\.metric-value\s*\{[^}]*color:\s*var\(--accent-deep\);[^}]*font-size:\s*var\(--body-font-size\);/is);
+  assert.match(newCss, /\.body-paragraph strong[\s\S]*?color:\s*var\(--accent-deep\);/i);
+  assert.match(newCss, /\.callout-block,\s*\.risk-block\s*\{[^}]*background:\s*linear-gradient\(135deg,\s*#070907/is);
+  assert.match(newCss, /\.brand-card-title,\s*\.brand-card-guide\s*\{[^}]*color:\s*var\(--accent\);/is);
+  assert.match(newCss, /\.cover-page\s*\{[^}]*box-shadow:\s*inset 0 10px 0 var\(--accent\);/is);
+  assert.doesNotMatch(`${oldCss}\n${newCss}`, /--gold|--warm-red|data-theme/i);
+  assert.doesNotMatch(`${oldCss}\n${newCss}`, /#ba8d32|#9c701c|#d5ad59|#ff8a68|rgba\(210,\s*90,\s*50/i);
   assert.doesNotMatch(runtime, /dataset\.theme/);
   assert.doesNotMatch(renderer, /--theme/);
+});
+
+test("new is the default render style and old remains explicitly selectable", () => {
+  assert.equal(resolveStyleVariant(), "new");
+  assert.equal(resolveStyleVariant("new"), "new");
+  assert.equal(resolveStyleVariant("OLD"), "old");
+});
+
+test("unsupported render styles are rejected with a stable diagnostic", () => {
+  assert.throws(
+    () => resolveStyleVariant("lime"),
+    (error) => error?.diagnostic?.code === "E_STYLE_UNSUPPORTED"
+  );
 });
 
 test("guided endcard requests the bundled QR asset", () => {
@@ -164,6 +185,7 @@ AI 基建对应当前场景，主体对应投资龙头。
   const debugResponse = JSON.parse(debugResult.stdout);
   const debugDirectory = `${outputDirectory}.debug`;
   assert.equal(debugResponse.outputDirectory, debugDirectory);
+  assert.equal(debugResponse.manifest.style, "new");
   assert.equal(debugResponse.manifest.mode, "debug");
   assert.equal(debugResponse.manifest.deliveryReady, false);
   assert.ok(debugResponse.manifest.blockingDiagnostics.some((item) => item.code === "E_PAGE_FILL_LOW"));
@@ -187,6 +209,7 @@ test("cover render loads required fonts and downsamples 2x output to delivery si
   context.after(() => fs.rm(workspace, { recursive: true, force: true }));
   const inputPath = path.join(workspace, "input.md");
   const outputDirectory = path.join(workspace, "视频图");
+  const oldOutputDirectory = path.join(workspace, "视频图-old");
   await fs.writeFile(inputPath, `---
 title: AI投资叙事
 subtitle: 用清晰的字体层级讲明白产业变化
@@ -212,6 +235,7 @@ kicker: 字体与清晰度测试
   const result = await runNode(["scripts/render.mjs", inputPath, "--output", outputDirectory, "--cover-only", "--json"], projectRoot);
   assert.equal(result.code, 0, result.stderr || result.stdout);
   const response = JSON.parse(result.stdout);
+  assert.equal(response.manifest.style, "new");
   assert.equal(response.manifest.renderScale, 2);
   assert.deepEqual(
     [response.manifest.renderWidth, response.manifest.renderHeight, response.manifest.width, response.manifest.height],
@@ -226,4 +250,20 @@ kicker: 字体与清晰度测试
 
   const png = await fs.readFile(path.join(outputDirectory, "01-cover.png"));
   assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [1080, 1440]);
+
+  const oldResult = await runNode([
+    "scripts/render.mjs",
+    inputPath,
+    "--output",
+    oldOutputDirectory,
+    "--style",
+    "old",
+    "--cover-only",
+    "--json"
+  ], projectRoot);
+  assert.equal(oldResult.code, 0, oldResult.stderr || oldResult.stdout);
+  const oldResponse = JSON.parse(oldResult.stdout);
+  assert.equal(oldResponse.manifest.style, "old");
+  const oldPng = await fs.readFile(path.join(oldOutputDirectory, "01-cover.png"));
+  assert.notEqual(Buffer.compare(png, oldPng), 0);
 });

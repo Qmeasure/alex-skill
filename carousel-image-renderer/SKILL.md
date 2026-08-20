@@ -28,6 +28,7 @@ description: Create source-grounded Chinese financial-media carousels for 智富
 
 - **HITL（默认）**：写作前让用户一次选择内容角度和暂定封面。
 - **yolo**：仅在用户明确要求“yolo”或“全自动”时跳过选择，直接采用推荐方案。
+- **渲染风格**：默认使用 `new`；仅当用户明确要求 `old` 时，才在封面预览、debug 和正式渲染命令中一致追加 `--style old`。
 
 ## 工作流程
 

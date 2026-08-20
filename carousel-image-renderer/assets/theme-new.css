@@ -1,0 +1,182 @@
+/* 默认 new 风格：在 old 基础样式之后加载，以白、荧光青柠和近黑覆盖视觉层。 */
+:root {
+  --paper: #f5f6f2;
+  --paper-top: #ffffff;
+  --ink: #090b09;
+  --body-ink: #171a17;
+  --strong-ink: #050605;
+  --heading-ink: #0b0d0b;
+  --soft-ink: #282d28;
+  --subtle-ink: #495149;
+  --marker-ink: #070907;
+  --muted: #687068;
+  --accent: #9fe600;
+  --accent-deep: #416500;
+  --marker: #aaef12;
+  --marker-deep: #93d500;
+  --rule: rgba(9, 11, 9, 0.19);
+  --soft-rule: rgba(9, 11, 9, 0.11);
+  --wash: rgba(159, 230, 0, 0.065);
+  --soft-accent: rgba(159, 230, 0, 0.14);
+  --accent-border: rgba(104, 153, 0, 0.34);
+  --quote-ink: #303630;
+  --quote-bg: rgba(159, 230, 0, 0.1);
+  --callout-start: #aaef12;
+  --callout-end: #9fe600;
+  --code-bg: #080a08;
+  --code-head: rgba(159, 230, 0, 0.09);
+  --code-ink: #f5f6f2;
+  --code-accent: #aaef12;
+  --table-head-bg: #090b09;
+  --table-alt-bg: rgba(159, 230, 0, 0.075);
+  --html-bg: rgba(159, 230, 0, 0.08);
+  --footer-ink: #111411;
+  --footer-muted: #687068;
+  --cover-subtitle: #303630;
+  --cover-footer: #505850;
+  --cover-glow-a: rgba(159, 230, 0, 0.2);
+  --cover-glow-b: rgba(9, 11, 9, 0.08);
+  --author-outline: rgba(9, 11, 9, 0.5);
+  --author-shadow: rgba(9, 11, 9, 0.2);
+  --font-display: var(--font-sans);
+  --title-underline: linear-gradient(90deg, #9fe600 0%, #9fe600 78%, #090b09 78%, #090b09 87%, transparent 87%);
+}
+
+html,
+body {
+  background: #dfe3dc;
+}
+
+.page-card {
+  box-shadow: none;
+}
+
+.body-paragraph strong,
+.list-block strong,
+.quote-block strong,
+.markdown-table strong {
+  color: var(--accent-deep);
+  font-weight: 850;
+}
+
+.accent {
+  color: var(--accent-deep);
+  text-decoration-line: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 0.18em;
+  text-underline-offset: 0.1em;
+}
+
+.section-diamond {
+  transform: skewY(-16deg);
+}
+
+.metric-value {
+  color: var(--accent-deep);
+  font-size: var(--body-font-size);
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.marker-block {
+  padding: 15px 21px 17px;
+  color: var(--marker-ink);
+  background: var(--accent);
+  border-left: 8px solid var(--ink);
+  font-weight: 900;
+  line-height: 1.55;
+}
+
+.marker-ink {
+  padding: 0;
+  background: transparent;
+}
+
+.task-checkbox.is-checked {
+  color: var(--ink);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.markdown-rule {
+  background: linear-gradient(90deg, var(--ink) 0 12%, var(--accent) 12% 88%, var(--ink) 88% 100%);
+}
+
+.markdown-table th {
+  color: var(--accent);
+  background: var(--table-head-bg);
+}
+
+.callout-block,
+.risk-block {
+  position: relative;
+  margin-top: 0;
+  padding: 26px 32px;
+  color: inherit;
+  background: linear-gradient(135deg, #070907 0%, #161a16 100%);
+  border: 1px solid var(--accent);
+  border-left: 7px solid var(--accent);
+  border-radius: 4px 14px 14px 4px;
+  font-size: 32px;
+  font-weight: inherit;
+  line-height: 1.62;
+  letter-spacing: inherit;
+}
+
+.callout-label,
+.risk-label {
+  display: block;
+  margin-right: 0;
+  margin-bottom: 8px;
+  color: var(--accent);
+  font-size: inherit;
+  font-weight: 850;
+  letter-spacing: 0.5px;
+  white-space: normal;
+}
+
+.callout-copy,
+.risk-copy {
+  color: var(--paper);
+  font-weight: 500;
+}
+
+.brand-card {
+  color: var(--paper);
+  background: var(--ink);
+  border: 1px solid var(--accent);
+}
+
+.brand-card-title,
+.brand-card-guide {
+  color: var(--accent);
+}
+
+.brand-card-intro {
+  color: #dfe4dc;
+}
+
+.cover-page {
+  background:
+    linear-gradient(160deg, transparent 0 66%, var(--cover-glow-a) 66% 73%, transparent 73%),
+    radial-gradient(circle at 88% 82%, var(--cover-glow-b), transparent 31%),
+    var(--paper);
+  box-shadow: inset 0 10px 0 var(--accent);
+}
+
+.cover-kicker {
+  color: var(--accent);
+  background: var(--ink);
+  clip-path: polygon(8% 0, 100% 0, 92% 100%, 0 100%);
+}
+
+.cover-title::after {
+  height: 11px;
+  background-image: var(--title-underline);
+  transform: rotate(-1.8deg);
+}
+
+.cover-bottom {
+  padding-top: 20px;
+  border-top: 3px solid var(--ink);
+}

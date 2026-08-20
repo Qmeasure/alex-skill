@@ -28,6 +28,7 @@ const FILL_WARNING_THRESHOLD = 0.75;
 const MIN_BODY_PAGES = 7;
 const MAX_BODY_PAGES = 16;
 const SUPPORTED_ENDCARD_VARIANTS = new Set(["native", "guided"]);
+const SUPPORTED_STYLE_VARIANTS = new Set(["new", "old"]);
 
 export async function downsampleScreenshot(png) {
   const sourceWidth = png.readUInt32BE(16);
@@ -67,6 +68,18 @@ export function resolveEndcardVariant(value = "") {
     });
   }
   return endcard;
+}
+
+export function resolveStyleVariant(value = "") {
+  const style = String(value || "new").trim().toLowerCase();
+  if (!SUPPORTED_STYLE_VARIANTS.has(style)) {
+    throw diagnosticError("E_STYLE_UNSUPPORTED", `Unsupported render style "${value}".`, {
+      actual: value,
+      expected: "new or old",
+      action: "Use --style new or --style old."
+    });
+  }
+  return style;
 }
 
 export function qrAssetPathFor(endcard) {
@@ -122,7 +135,7 @@ export function buildDebugTargets(pageDetails, diagnostics) {
 }
 
 function parseArguments(argv) {
-  const options = { input: "", output: "", endcard: "", json: false, debug: false };
+  const options = { input: "", output: "", endcard: "", style: "", json: false, debug: false };
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index];
     if (value === "--output" || value === "-o") {
@@ -130,6 +143,9 @@ function parseArguments(argv) {
       index += 1;
     } else if (value === "--endcard") {
       options.endcard = argv[index + 1] || "";
+      index += 1;
+    } else if (value === "--style") {
+      options.style = argv[index + 1] || "";
       index += 1;
     } else if (value === "--cover-only") {
       options.coverOnly = true;
@@ -168,8 +184,9 @@ function buildHtml(document, css, runtimeScripts) {
 </html>`;
 }
 
-async function render(inputPath, outputDirectory, endcardVariant = "", coverOnly = false, debug = false) {
+async function render(inputPath, outputDirectory, endcardVariant = "", coverOnly = false, debug = false, styleVariant = "") {
   const endcard = resolveEndcardVariant(endcardVariant);
+  const style = resolveStyleVariant(styleVariant);
   const renderedOutputDirectory = debug ? debugOutputDirectoryFor(outputDirectory) : outputDirectory;
   const debugOutputDirectory = debugOutputDirectoryFor(outputDirectory);
   const debugAction = debug
@@ -214,6 +231,7 @@ async function render(inputPath, outputDirectory, endcardVariant = "", coverOnly
   try {
     assets = await Promise.all([
       fs.readFile(path.join(SKILL_DIR, "assets/theme.css"), "utf8"),
+      style === "new" ? fs.readFile(path.join(SKILL_DIR, "assets/theme-new.css"), "utf8") : Promise.resolve(""),
       fs.readFile(path.join(SKILL_DIR, "assets/cover.js"), "utf8"),
       fs.readFile(path.join(SKILL_DIR, "assets/endcard.js"), "utf8"),
       fs.readFile(path.join(SKILL_DIR, "assets/runtime.js"), "utf8"),
@@ -227,7 +245,8 @@ async function render(inputPath, outputDirectory, endcardVariant = "", coverOnly
       action: "Run preflight.py. Restore missing assets or install the reported dependency, then rerun render.mjs."
     });
   }
-  const [css, coverScript, endcardScript, runtimeScript, playwright, authorAvatarBytes, qrBytes] = assets;
+  const [baseCss, styleCss, coverScript, endcardScript, runtimeScript, playwright, authorAvatarBytes, qrBytes] = assets;
+  const css = styleCss ? `${baseCss}\n${styleCss}` : baseCss;
   document.meta.authorAvatar = `data:image/png;base64,${authorAvatarBytes.toString("base64")}`;
   if (qrBytes) document.meta.brandQr = `data:image/png;base64,${qrBytes.toString("base64")}`;
   document.meta.endcard = endcard;
@@ -403,6 +422,7 @@ async function render(inputPath, outputDirectory, endcardVariant = "", coverOnly
     const manifest = {
       title: plainText(document.meta.title),
       endcard,
+      style,
       coverOnly,
       mode: debug ? "debug" : "formal",
       deliveryReady: !debug && !coverOnly,
@@ -441,7 +461,7 @@ async function render(inputPath, outputDirectory, endcardVariant = "", coverOnly
 async function main() {
   const options = parseArguments(process.argv.slice(2));
   if (options.help) {
-    process.stdout.write("Usage: node render.mjs <input.md> --output <output-dir> [--endcard native|guided] [--cover-only] [--debug] [--json]\n");
+    process.stdout.write("Usage: node render.mjs <input.md> --output <output-dir> [--style new|old] [--endcard native|guided] [--cover-only] [--debug] [--json]\n");
     return;
   }
   if (!options.input || !options.output) {
@@ -450,7 +470,7 @@ async function main() {
   const inputPath = path.resolve(options.input);
   const outputDirectory = path.resolve(options.output);
   const renderedOutputDirectory = options.debug ? debugOutputDirectoryFor(outputDirectory) : outputDirectory;
-  const manifest = await render(inputPath, outputDirectory, options.endcard, options.coverOnly, options.debug);
+  const manifest = await render(inputPath, outputDirectory, options.endcard, options.coverOnly, options.debug, options.style);
   if (options.json) {
     process.stdout.write(`${JSON.stringify({ ok: true, outputDirectory: renderedOutputDirectory, manifest }, null, 2)}\n`);
   } else {
