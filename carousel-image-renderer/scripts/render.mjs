@@ -7,10 +7,9 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import { parseDocument, validateDocument } from "./parser.mjs";
-import { embedLocalMarkdownImages } from "./images.mjs";
 import { loadPlaywright, browserLaunchOptions } from "./browser.mjs";
-import { diagnosticError, diagnosticsError, diagnosticsFromError, formatDiagnostic, parseFailure } from "./diagnostics.mjs";
+import { diagnosticError, diagnosticsFromError, formatDiagnostic } from "./diagnostics.mjs";
+import { loadRenderDocument } from "./render/document.mjs";
 import { inspectLayout } from "./render/layout.mjs";
 import { buildManifest, collectPageDetails } from "./render/manifest.mjs";
 import { captureScreenshots, commitOwnedOutputs, createStagingDirectory, discardStagingDirectory, writeManifest } from "./render/output.mjs";
@@ -115,40 +114,7 @@ async function render(inputPath, outputDirectory, endcardVariant = "", coverOnly
   const debugAction = debug
     ? `Inspect the diagnostic PNGs in "${renderedOutputDirectory}", including the failing page and adjacent pages.`
     : `Run the same render command with --debug; diagnostic PNGs will be written to "${debugOutputDirectory}" without replacing formal output.`;
-  let rawSource;
-  try {
-    rawSource = await fs.readFile(inputPath, "utf8");
-  } catch (error) {
-    throw diagnosticError("E_INPUT_READ", "The input Markdown file could not be read.", {
-      location: inputPath,
-      actual: error.message,
-      action: "Confirm the file exists and is readable UTF-8 text, then rerun render.mjs."
-    });
-  }
-  let source;
-  try {
-    source = await embedLocalMarkdownImages(rawSource, inputPath);
-  } catch (error) {
-    throw diagnosticError("E_IMAGE_READ", "A local Markdown image could not be embedded.", {
-      actual: error.message,
-      expected: "Every local image path resolves from the Markdown file directory",
-      action: "Fix the reported image path or regenerate the source thumbnails, then rerun render.mjs."
-    });
-  }
-  let document;
-  try {
-    document = parseDocument(source);
-  } catch (error) {
-    throw diagnosticsError([parseFailure(error)]);
-  }
-  if (coverOnly && !document.meta.cover) {
-    throw diagnosticError("E_COVER_REQUIRED", "--cover-only cannot run when front matter sets cover: false.", {
-      action: "Enable the cover or remove --cover-only."
-    });
-  }
-  const validation = validateDocument(document);
-  if (validation.errors.length) throw diagnosticsError(validation.errors);
-  validation.warnings.forEach((warning) => process.stderr.write(`${formatDiagnostic(warning, "Warning")}\n`));
+  const { document, validation } = await loadRenderDocument(inputPath, { coverOnly });
 
   let assets;
   try {
