@@ -22,7 +22,7 @@ const RENDER_HEIGHT = PAGE_HEIGHT * RENDER_SCALE;
 const SUPPORTED_ENDCARD_VARIANTS = new Set(["native", "guided"]);
 const SUPPORTED_STYLE_VARIANTS = new Set(["new", "old"]);
 
-export function resolveEndcardVariant(value = "") {
+function resolveEndcardVariant(value = "") {
   const endcard = String(value || "native").trim().toLowerCase();
   if (!SUPPORTED_ENDCARD_VARIANTS.has(endcard)) {
     throw diagnosticError("E_ENDCARD_UNSUPPORTED", `Unsupported endcard variant "${value}".`, {
@@ -34,7 +34,7 @@ export function resolveEndcardVariant(value = "") {
   return endcard;
 }
 
-export function resolveStyleVariant(value = "") {
+function resolveStyleVariant(value = "") {
   const style = String(value || "new").trim().toLowerCase();
   if (!SUPPORTED_STYLE_VARIANTS.has(style)) {
     throw diagnosticError("E_STYLE_UNSUPPORTED", `Unsupported render style "${value}".`, {
@@ -46,7 +46,7 @@ export function resolveStyleVariant(value = "") {
   return style;
 }
 
-export function debugOutputDirectoryFor(outputDirectory) {
+function debugOutputDirectoryFor(outputDirectory) {
   return `${path.resolve(outputDirectory)}.debug`;
 }
 

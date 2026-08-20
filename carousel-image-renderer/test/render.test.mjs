@@ -5,7 +5,6 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { resolveEndcardVariant, resolveStyleVariant } from "../scripts/render.mjs";
 import { qrAssetPathFor } from "../scripts/render/browser-session.mjs";
 import { buildBodyPageCountDiagnostics } from "../scripts/render/layout.mjs";
 
@@ -29,12 +28,6 @@ test("body-page limits accept the inclusive range and reject both boundaries", (
   assert.equal(maximum[0]?.code, "E_BODY_PAGES_MAX");
   assert.match(maximum[0]?.expected || "", /At most 16 body pages, 18 total pages/);
   assert.deepEqual(buildBodyPageCountDiagnostics(0, 1, { coverOnly: true }), []);
-});
-
-test("default endcard is native and does not request a QR asset", () => {
-  const endcard = resolveEndcardVariant();
-  assert.equal(endcard, "native");
-  assert.equal(qrAssetPathFor(endcard), null);
 });
 
 test("native and guided endcards preserve the same brand introduction", async () => {
@@ -94,30 +87,36 @@ test("old and new styles keep their fixed palette contracts", async () => {
   assert.doesNotMatch(renderer, /--theme/);
 });
 
-test("new is the default render style and old remains explicitly selectable", () => {
-  assert.equal(resolveStyleVariant(), "new");
-  assert.equal(resolveStyleVariant("new"), "new");
-  assert.equal(resolveStyleVariant("OLD"), "old");
+test("unsupported render styles are rejected with a stable diagnostic", async () => {
+  const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+  const result = await runNode([
+    "scripts/render.mjs",
+    "missing.md",
+    "--output",
+    "unused",
+    "--style",
+    "lime",
+    "--json"
+  ], projectRoot);
+  assert.equal(result.code, 1, result.stderr || result.stdout);
+  assert.equal(JSON.parse(result.stdout).errors[0]?.code, "E_STYLE_UNSUPPORTED");
 });
 
-test("unsupported render styles are rejected with a stable diagnostic", () => {
-  assert.throws(
-    () => resolveStyleVariant("lime"),
-    (error) => error?.diagnostic?.code === "E_STYLE_UNSUPPORTED"
-  );
-});
-
-test("guided endcard requests the bundled QR asset", () => {
-  const endcard = resolveEndcardVariant("guided");
-  assert.equal(endcard, "guided");
-  assert.match(qrAssetPathFor(endcard), /zhifujie-qr\.png$/);
-});
-
-test("legacy endcard is rejected with a stable diagnostic", () => {
-  assert.throws(
-    () => resolveEndcardVariant("legacy"),
-    (error) => error?.diagnostic?.code === "E_ENDCARD_UNSUPPORTED"
-  );
+test("endcard variants keep native QR-free, guided QR, and legacy rejection contracts", async () => {
+  assert.equal(qrAssetPathFor("native"), null);
+  assert.match(qrAssetPathFor("guided"), /zhifujie-qr\.png$/);
+  const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+  const result = await runNode([
+    "scripts/render.mjs",
+    "missing.md",
+    "--output",
+    "unused",
+    "--endcard",
+    "legacy",
+    "--json"
+  ], projectRoot);
+  assert.equal(result.code, 1, result.stderr || result.stdout);
+  assert.equal(JSON.parse(result.stdout).errors[0]?.code, "E_ENDCARD_UNSUPPORTED");
 });
 
 test("debug render exposes blocking layout pages without replacing formal output", { timeout: 60000 }, async (context) => {
@@ -237,6 +236,7 @@ kicker: 字体与清晰度测试
   const result = await runNode(["scripts/render.mjs", inputPath, "--output", outputDirectory, "--cover-only", "--json"], projectRoot);
   assert.equal(result.code, 0, result.stderr || result.stdout);
   const response = JSON.parse(result.stdout);
+  assert.equal(response.manifest.endcard, "native");
   assert.equal(response.manifest.style, "new");
   assert.equal(response.manifest.renderScale, 2);
   assert.deepEqual(
