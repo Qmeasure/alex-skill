@@ -341,13 +341,14 @@ async function render(inputPath, outputDirectory, endcardVariant = "", coverOnly
 
     const rawPageDetails = await page.evaluate(() => [...document.querySelectorAll(".page-card")].map((card, index) => {
       const kind = card.classList.contains("endcard-page") ? "endcard" : (card.dataset.kind || "body");
-      const labelNode = card.querySelector(".cover-title, .section-text, .subheading, .lead-block, .body-paragraph, .thumbnails-heading");
+      const labelNode = card.querySelector(".cover-title, .methodology-3x4-title, .section-text, .subheading, .lead-block, .body-paragraph, .thumbnails-heading");
       const features = [
         ["risk", ".risk-block"],
         ["callout", ".callout-block"],
         ["table", ".markdown-table"],
         ["image", ".markdown-image, .inline-markdown-image"],
-        ["metrics", ".metrics"]
+        ["metrics", ".metrics"],
+        ["methodology-3x4", ".methodology-3x4"]
       ].filter(([, selector]) => card.querySelector(selector)).map(([name]) => name);
       const textNodes = kind === "cover"
         ? [...card.querySelectorAll(".cover-kicker, .cover-title, .cover-subtitle")]

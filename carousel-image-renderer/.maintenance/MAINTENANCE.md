@@ -18,10 +18,11 @@
 - Main Agent 起草前必须重申 AIGC 风格关键约束；独立 AIGC 风格 sub-agent 负责以 qu-ai-wei embedded mode 清理初稿，并在每批审计修订后执行最终文字，Main Agent 只决定修改要求和验收结果。
 - AIGC 风格 sub-agent 只接收当前 Markdown 和 Main Agent 批准后的修改要求，不读取信源或原始审计报告；每篇最多调用三次，没有读者可见文字修改时不调用。
 - 渲染器固定使用蓝、白、近黑一套品牌配色，不向 Agent 或输入稿暴露主题选择。
+- `:::methodology-3x4` 由渲染器生成固定介绍文案；Agent 只决定是否插入并撰写后续场景与入场方式映射。
 - `scripts/prepare-audit.mjs` 全自动生成上下文审计包和事实、证据与视觉审计包；首轮 Main Agent 只把对应文件夹交给两个并行 sub-agent。
 - 两个审计 sub-agent 只定位和解释实质问题，不提供解决方案、改写、优化建议或交付结论；所有输出都只是建议，由 Main Agent 独立裁决。
-- 上下文审计的成品依据只包括渲染后逐页可见文字，负责首次读者理解与叙事连续性。
-- 事实、证据与视觉审计负责事实、来源、3×4 证据和 callout/risk；视觉只检查封面层级和正文内容图片相关性，AIGC 风格由独立编辑 sub-agent 负责。
+- 上下文审计的成品依据只包括渲染后逐页可见文字，负责首次读者理解与叙事连续性；固定 3×4 文案只检查插入位置和衔接，不检查或改写内容。
+- 事实、证据与视觉审计负责事实、来源、3×4 场景与入场方式证据和 callout/risk；固定 3×4 文案不与文章信源核验，视觉只检查封面层级和正文内容图片相关性，AIGC 风格由独立编辑 sub-agent 负责。
 - overflow、坏图、字体加载、尺寸、页序和填充率由渲染器与脚本检查，不重复交给逐篇 LLM 审计。
 - 审计包只向事实、证据与视觉 sub-agent 提供封面标题内容区和正文内容图片的裁剪图，不暴露整页模板；同一类别只有一个负责人。
 - 审计最多两轮：第一轮完整双审，第二轮只按修改影响复审已处理问题、直接回归和新增重大风险；未受影响的审计不重跑，分页变化同时影响两项审计。
@@ -38,7 +39,8 @@
 | 事实边界、封面、叙事和文风 | `references/narrative-style.md` |
 | Markdown、front matter 和自定义指令 | `references/content-format.md` |
 | 固定品牌配色 | `assets/theme.css` |
-| 3×4 定义与映射 | `references/3x4-methodology.md` |
+| 3×4 使用条件与具体映射 | `references/3x4-methodology.md` |
+| 3×4 固定读者文案 | `assets/methodology-3x4.mjs` |
 | 首次读者上下文关联审计 | `references/context-audit-checklist.md` |
 | 事实、来源、3×4 证据与视觉审计 | `references/audit-checklist.md` |
 | AIGC 风格与防御性废话 | 写作规范在 `references/narrative-style.md`，判断示例在 `references/defensive-negation-examples.md` |

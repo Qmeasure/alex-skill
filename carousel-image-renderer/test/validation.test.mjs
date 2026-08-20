@@ -56,6 +56,65 @@ title: 明确标题
   assert.deepEqual(errorCodes(source), []);
 });
 
+test("the fixed 3×4 directive expands deterministic copy and accepts no parameters", () => {
+  const source = `---
+title: 固定方法论组件
+---
+
+:::methodology-3x4
+
+当前案例对应 AI 基建，主体对应投资龙头。
+
+:::callout
+订单变化决定需求能否持续。
+:::
+
+:::risk
+新增产能可能改变价格方向。
+:::
+
+:::thumbnails
+![](./page-01.png)
+:::
+`;
+  const document = parseDocument(source);
+  const methodology = document.blocks.find((block) => block.type === "methodology-3x4");
+  assert.match(methodology?.raw || "", /3×4 是智富界提出的一种分析投资机会的框架/);
+  assert.match(methodology?.raw || "", /AI 基建[\s\S]*生成式大模型[\s\S]*AI 硬件/);
+  assert.match(methodology?.raw || "", /挑战龙头[\s\S]*投资龙头/);
+  assert.doesNotMatch(methodology?.raw || "", /商业模式|十二格/);
+  assert.deepEqual(validateDocument(document).errors, []);
+  assert.throws(
+    () => parseDocument(source.replace(":::methodology-3x4", ":::methodology-3x4 custom")),
+    /does not accept parameters/
+  );
+});
+
+test("3×4 references require one fixed component before the first reference", () => {
+  const tail = `
+
+:::callout
+关系证据需要核验。
+:::
+
+:::risk
+映射错误可能误导判断。
+:::
+
+:::thumbnails
+![](./page-01.png)
+:::
+`;
+  const withoutComponent = `---\ntitle: 缺少组件\n---\n\n3×4 对应 AI 基建。${tail}`;
+  const afterReference = `---\ntitle: 顺序错误\n---\n\n3×4 对应 AI 基建。\n\n:::methodology-3x4${tail}`;
+  const duplicate = `---\ntitle: 重复组件\n---\n\n:::methodology-3x4\n\n:::methodology-3x4${tail}`;
+  const coverReference = `---\ntitle: 3×4 映射\n---\n\n:::methodology-3x4${tail}`;
+  assert.ok(errorCodes(withoutComponent).includes("E_3X4_COMPONENT_REQUIRED"));
+  assert.ok(errorCodes(afterReference).includes("E_3X4_COMPONENT_ORDER"));
+  assert.ok(errorCodes(duplicate).includes("E_3X4_COMPONENT_MULTIPLE"));
+  assert.ok(errorCodes(coverReference).includes("E_3X4_COVER_REFERENCE"));
+});
+
 test("the fixed brand palette rejects legacy theme metadata", () => {
   const base = `---
 title: 主题测试

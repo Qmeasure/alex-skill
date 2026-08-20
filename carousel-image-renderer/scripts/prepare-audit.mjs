@@ -74,6 +74,16 @@ function buildPagesMarkdown(visiblePages) {
   return `# 渲染后逐页文字\n\n${sections.join("\n\n")}\n`;
 }
 
+function identifyFixedComponents(checklist, visiblePages) {
+  const methodologyPages = visiblePages
+    .filter((page) => Array.isArray(page.features) && page.features.includes("methodology-3x4"))
+    .map((page) => page.page);
+  if (!methodologyPages.length) return checklist;
+  return `${checklist.trimEnd()}\n\n## 审计包固定组件标识\n\n` +
+    `第 ${methodologyPages.join("、")} 页包含渲染器生成的 \`methodology-3x4\` 固定组件；` +
+    `按本清单对固定组件和具体映射的职责边界处理。\n`;
+}
+
 function buildVisualCrops(visiblePages, width, height) {
   const crops = [];
   for (const page of visiblePages) {
@@ -207,6 +217,8 @@ export async function prepareAuditPackages({ inputPath, workspace }) {
     fs.readFile(path.join(SKILL_DIR, "references/context-audit-checklist.md"), "utf8"),
     fs.readFile(path.join(SKILL_DIR, "references/audit-checklist.md"), "utf8")
   ]);
+  const identifiedContextChecklist = identifyFixedComponents(contextChecklist, visiblePages);
+  const identifiedEvidenceChecklist = identifyFixedComponents(evidenceChecklist, visiblePages);
   await fs.mkdir(resolvedWorkspace, { recursive: true });
   const stagingRoot = await fs.mkdtemp(path.join(resolvedWorkspace, ".audit-packages-staging-"));
   let committed = false;
@@ -222,9 +234,9 @@ export async function prepareAuditPackages({ inputPath, workspace }) {
       fs.mkdir(visualDirectory, { recursive: true })
     ]);
     await Promise.all([
-      fs.writeFile(path.join(contextDirectory, "AUDIT.md"), contextChecklist, "utf8"),
+      fs.writeFile(path.join(contextDirectory, "AUDIT.md"), identifiedContextChecklist, "utf8"),
       fs.writeFile(path.join(contextDirectory, "pages.md"), pagesMarkdown, "utf8"),
-      fs.writeFile(path.join(evidenceDirectory, "AUDIT.md"), evidenceChecklist, "utf8"),
+      fs.writeFile(path.join(evidenceDirectory, "AUDIT.md"), identifiedEvidenceChecklist, "utf8"),
       fs.writeFile(path.join(evidenceDirectory, "article.md"), article, "utf8"),
       fs.writeFile(path.join(evidenceDirectory, "pages.md"), pagesMarkdown, "utf8"),
       fs.writeFile(path.join(sourcesDirectory, "index.json"), `${JSON.stringify(sourceIndex, null, 2)}\n`, "utf8"),
