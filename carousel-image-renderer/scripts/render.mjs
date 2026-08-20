@@ -7,13 +7,13 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import sharp from "sharp";
 import { parseDocument, validateDocument } from "./parser.mjs";
 import { embedLocalMarkdownImages } from "./images.mjs";
-import { loadPlaywright, browserLaunchOptions, createStagingDirectory, discardStagingDirectory, commitOwnedOutputs } from "./browser.mjs";
+import { loadPlaywright, browserLaunchOptions } from "./browser.mjs";
 import { diagnosticError, diagnosticsError, diagnosticsFromError, formatDiagnostic, parseFailure } from "./diagnostics.mjs";
 import { inspectLayout } from "./render/layout.mjs";
 import { buildManifest, collectPageDetails } from "./render/manifest.mjs";
+import { captureScreenshots, commitOwnedOutputs, createStagingDirectory, discardStagingDirectory, writeManifest } from "./render/output.mjs";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const SKILL_DIR = path.resolve(SCRIPT_DIR, "..");
@@ -24,34 +24,6 @@ const RENDER_WIDTH = PAGE_WIDTH * RENDER_SCALE;
 const RENDER_HEIGHT = PAGE_HEIGHT * RENDER_SCALE;
 const SUPPORTED_ENDCARD_VARIANTS = new Set(["native", "guided"]);
 const SUPPORTED_STYLE_VARIANTS = new Set(["new", "old"]);
-
-export async function downsampleScreenshot(png) {
-  const sourceWidth = png.readUInt32BE(16);
-  const sourceHeight = png.readUInt32BE(20);
-  if (sourceWidth !== RENDER_WIDTH || sourceHeight !== RENDER_HEIGHT) {
-    throw diagnosticError("E_RENDER_DIMENSIONS", "The high-resolution screenshot has unexpected dimensions.", {
-      actual: `${sourceWidth}×${sourceHeight}`,
-      expected: `${RENDER_WIDTH}×${RENDER_HEIGHT}`,
-      action: `Keep the browser viewport at ${PAGE_WIDTH}×${PAGE_HEIGHT}, deviceScaleFactor at ${RENDER_SCALE}, and screenshot scale at device.`
-    });
-  }
-  try {
-    const { data, info } = await sharp(png)
-      .resize(PAGE_WIDTH, PAGE_HEIGHT, { fit: "fill", kernel: sharp.kernel.lanczos3 })
-      .png({ compressionLevel: 9, adaptiveFiltering: true })
-      .toBuffer({ resolveWithObject: true });
-    if (info.width !== PAGE_WIDTH || info.height !== PAGE_HEIGHT) {
-      throw new Error(`Sharp returned ${info.width}×${info.height}.`);
-    }
-    return data;
-  } catch (error) {
-    throw diagnosticError("E_OUTPUT_RESIZE", "The supersampled screenshot could not be resized to the delivery dimensions.", {
-      actual: error.message,
-      expected: `${PAGE_WIDTH}×${PAGE_HEIGHT} PNG output`,
-      action: "Confirm sharp is installed and operational, then rerun render.mjs."
-    });
-  }
-}
 
 export function resolveEndcardVariant(value = "") {
   const endcard = String(value || "native").trim().toLowerCase();
@@ -251,18 +223,14 @@ async function render(inputPath, outputDirectory, endcardVariant = "", coverOnly
       warnings: validation.warnings
     });
 
-    const cards = page.locator(".page-card");
-    const count = await cards.count();
-    const files = [];
-    for (let index = 0; index < count; index += 1) {
-      const kind = await cards.nth(index).getAttribute("data-kind");
-      if (coverOnly && kind !== "cover") continue;
-      const fileName = `${String(index + 1).padStart(2, "0")}-${kind === "cover" ? "cover" : "page"}.png`;
-      const supersampled = await cards.nth(index).screenshot({ type: "png", scale: "device" });
-      const delivered = await downsampleScreenshot(supersampled);
-      await fs.writeFile(path.join(stagingDirectory, fileName), delivered);
-      files.push(fileName);
-    }
+    const dimensions = {
+      pageWidth: PAGE_WIDTH,
+      pageHeight: PAGE_HEIGHT,
+      renderScale: RENDER_SCALE,
+      renderWidth: RENDER_WIDTH,
+      renderHeight: RENDER_HEIGHT
+    };
+    const files = await captureScreenshots({ page, coverOnly, stagingDirectory, dimensions });
 
     const pageDetails = await collectPageDetails(page, report, coverOnly);
     const manifest = buildManifest({
@@ -277,15 +245,9 @@ async function render(inputPath, outputDirectory, endcardVariant = "", coverOnly
       report,
       warnings: validation.warnings,
       renderErrors,
-      dimensions: {
-        pageWidth: PAGE_WIDTH,
-        pageHeight: PAGE_HEIGHT,
-        renderScale: RENDER_SCALE,
-        renderWidth: RENDER_WIDTH,
-        renderHeight: RENDER_HEIGHT
-      }
+      dimensions
     });
-    await fs.writeFile(path.join(stagingDirectory, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+    await writeManifest(stagingDirectory, manifest);
     await browser.close();
     browser = null;
     await commitOwnedOutputs(stagingDirectory, renderedOutputDirectory);
