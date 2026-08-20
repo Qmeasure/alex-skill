@@ -1,4 +1,4 @@
-// 渲染环境：Playwright 模块定位、浏览器启动选项、输出目录清理。
+// 共享渲染环境：Playwright 模块定位与浏览器启动选项。
 
 import fs from "node:fs/promises";
 import path from "node:path";

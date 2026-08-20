@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-// 渲染编排：参数解析、HTML 注入、渲染检查（溢出 / 填充率 / 内容量）、截图与 manifest。
-// 解析逻辑在 parser.mjs，图片嵌入在 images.mjs，环境探测在 browser.mjs。
+// 渲染入口：style/endcard 选择、CLI 协议与文档 → 浏览器 → 布局 → 输出的顶层编排。
+// 领域实现位于 render/，共享 Playwright 定位与启动能力位于 browser.mjs。
 
 import fs from "node:fs/promises";
 import path from "node:path";
