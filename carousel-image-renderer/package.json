@@ -4,7 +4,7 @@
   "description": "Render source-grounded Chinese financial-media carousels as 1080x1440 PNG cards.",
   "scripts": {
     "test": "node --test",
-    "check": "node --check assets/methodology-3x4.mjs && node --check scripts/parser.mjs && node --check scripts/parser/text.mjs && node --check scripts/parser/front-matter.mjs && node --check scripts/parser/blocks.mjs && node --check scripts/parser/document.mjs && node --check scripts/parser/validation.mjs && node --check scripts/validate.mjs && node --check scripts/render.mjs && node --check scripts/source-prep.mjs && node --check scripts/prepare-audit.mjs && node --check assets/runtime.js"
+    "check": "node --check assets/methodology-3x4.mjs && node --check scripts/parser.mjs && node --check scripts/parser/text.mjs && node --check scripts/parser/front-matter.mjs && node --check scripts/parser/blocks.mjs && node --check scripts/parser/document.mjs && node --check scripts/parser/validation.mjs && node --check scripts/validate.mjs && node --check scripts/render.mjs && node --check scripts/render/document.mjs && node --check scripts/render/browser-session.mjs && node --check scripts/render/layout.mjs && node --check scripts/render/manifest.mjs && node --check scripts/render/output.mjs && node --check scripts/source-prep.mjs && node --check scripts/prepare-audit.mjs && node --check assets/runtime.js"
   },
   "keywords": [],
   "author": "",
