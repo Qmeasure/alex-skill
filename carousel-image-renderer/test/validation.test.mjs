@@ -82,6 +82,37 @@ title: 主题测试
   }
 });
 
+test("section rejects nested Markdown headings without blocking literal hash text", () => {
+  const base = `---
+title: Section 语法测试
+---
+
+:::section
+SECTION_TITLE
+:::
+
+:::callout
+行业变化可能带来结构性机会。
+:::
+
+:::risk
+需求波动可能压低价格。
+:::
+
+:::thumbnails
+![](./page-01.png)
+:::
+`;
+  const invalid = base.replace("SECTION_TITLE", "## 成本曲线开始变化");
+  const error = validateDocument(parseDocument(invalid)).errors.find((item) => item.code === "E_SECTION_MARKDOWN_HEADING");
+  assert.equal(error?.line, 6);
+  assert.equal(error?.actual, "## 成本曲线开始变化");
+  assert.match(error?.action || "", /Remove the leading #/);
+
+  const valid = base.replace("SECTION_TITLE", "C#生态的成本曲线开始变化");
+  assert.equal(errorCodes(valid).includes("E_SECTION_MARKDOWN_HEADING"), false);
+});
+
 test("thumbnails must be the final content block", () => {
   const source = `---
 title: 明确标题

@@ -534,6 +534,17 @@ export function validateDocument(document) {
       action: "Add article body content below front matter."
     });
   }
+  document.blocks.filter((block) => block.type === "section").forEach((block) => {
+    String(block.raw || "").split("\n").forEach((line, index) => {
+      if (!/^\s*#{1,6}(?:\s+|$)/.test(line)) return;
+      addError("E_SECTION_MARKDOWN_HEADING", ":::section content must not contain Markdown heading syntax.", {
+        line: block.line == null ? undefined : block.line + index + 1,
+        actual: line.trim().slice(0, 80),
+        expected: "Plain section title text without leading Markdown heading markers",
+        action: "Remove the leading # characters; use either a plain :::section title or a standalone H2–H6 heading, not both."
+      });
+    });
+  });
   if (!document.blocks.some((block) => block.type === "callout")) {
     addError("E_CALLOUT_REQUIRED", "Every carousel must contain at least one non-empty :::callout block.", {
       expected: "At least one non-empty :::callout directive",

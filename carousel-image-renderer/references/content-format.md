@@ -63,6 +63,14 @@ cover: true
 | `:::thumbnails` | 生成末页（endcard）：原始资料预览导流页。 |
 | `:::pagebreak` | 在完整语义之间手动分页；无需结束行。 |
 
+`:::section` 内直接写标题文字，不支持 `#` Markdown 标题语法；使用 section 或独立的二至六级标题，不能叠加：
+
+```md
+:::section
+成本曲线开始变化
+:::
+```
+
 `:::thumbnails` 必须唯一、非空且位于全文最后，至多 4 张缩略图。直接使用 `source-manifest.json` 的 `thumbnailMarkdown`，不要改写其中的路径。
 
 优先自动分页，只在存在不可接受的叙事断点时使用 `:::pagebreak`。
