@@ -73,6 +73,11 @@ test("the fixed brand palette has no legacy warm colors or theme switch", async 
   const runtime = await fs.readFile(path.join(projectRoot, "assets/runtime.js"), "utf8");
   const renderer = await fs.readFile(path.join(projectRoot, "scripts/render.mjs"), "utf8");
   assert.match(css, /--accent:\s*#185fa9;/i);
+  assert.match(css, /--body-strong-ink:\s*#006aef;/i);
+  assert.match(css, /\.metric-value\s*\{[^}]*color:\s*var\(--accent\);/is);
+  assert.match(css, /\.callout-label\s*\{[^}]*color:\s*var\(--accent\);/is);
+  assert.match(css, /\.risk-block\s*\{[^}]*border-left:\s*5px solid var\(--accent\);/is);
+  assert.match(css, /\.risk-label\s*\{[^}]*color:\s*var\(--accent\);/is);
   assert.doesNotMatch(css, /--gold|--warm-red|data-theme/i);
   assert.doesNotMatch(css, /#ba8d32|#9c701c|#d5ad59|#ff8a68|rgba\(210,\s*90,\s*50/i);
   assert.doesNotMatch(runtime, /dataset\.theme/);

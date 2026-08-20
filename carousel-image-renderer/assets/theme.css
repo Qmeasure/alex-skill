@@ -329,7 +329,7 @@ del {
 }
 
 .metric-value {
-  color: var(--accent-deep);
+  color: var(--accent);
   font-size: 44px;
   font-weight: 900;
   white-space: nowrap;
@@ -362,7 +362,7 @@ del {
 
 .callout-label {
   margin-right: 0.28em;
-  color: var(--accent-deep);
+  color: var(--accent);
   font-weight: 900;
   white-space: nowrap;
 }
@@ -594,7 +594,7 @@ del {
   position: relative;
   background: linear-gradient(135deg, rgba(11, 59, 117, 0.06) 0%, rgba(24, 95, 169, 0.11) 100%);
   border: 1px solid rgba(11, 59, 117, 0.18);
-  border-left: 5px solid var(--accent-deep);
+  border-left: 5px solid var(--accent);
   border-radius: 4px 14px 14px 4px;
   padding: 26px 32px;
   font-size: 32px;
@@ -603,7 +603,7 @@ del {
 
 .risk-label {
   display: block;
-  color: var(--accent-deep);
+  color: var(--accent);
   font-size: inherit;
   font-weight: 850;
   letter-spacing: 0.5px;
