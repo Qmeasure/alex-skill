@@ -132,6 +132,34 @@
       });
       return metrics;
     }
+    if (block.type === "methodology-3x4") {
+      const methodology = element("section", "content-block methodology-3x4");
+      const heading = element("div", "methodology-3x4-heading");
+      heading.appendChild(element("span", "methodology-3x4-diamond"));
+      heading.appendChild(element("strong", "methodology-3x4-title", block.titleHtml));
+      methodology.appendChild(heading);
+      methodology.appendChild(element("p", "methodology-3x4-identity", block.identityHtml));
+
+      const scenes = element("div", "methodology-3x4-group");
+      scenes.appendChild(element("strong", "methodology-3x4-label", block.scenesLabelHtml));
+      const sceneItems = element("div", "methodology-3x4-scenes");
+      block.scenes.forEach((item) => sceneItems.appendChild(element("span", "methodology-3x4-scene", item.html)));
+      scenes.appendChild(sceneItems);
+      methodology.appendChild(scenes);
+
+      const paths = element("div", "methodology-3x4-group methodology-3x4-path-group");
+      paths.appendChild(element("strong", "methodology-3x4-label", block.entryPathsLabelHtml));
+      const pathItems = element("div", "methodology-3x4-paths");
+      block.entryPaths.forEach((item, index) => {
+        const path = element("div", "methodology-3x4-path");
+        path.appendChild(textElement("span", "methodology-3x4-path-number", String(index + 1).padStart(2, "0")));
+        path.appendChild(element("span", "methodology-3x4-path-copy", item.html));
+        pathItems.appendChild(path);
+      });
+      paths.appendChild(pathItems);
+      methodology.appendChild(paths);
+      return methodology;
+    }
     if (block.type === "marker") {
       const marker = element("p", "content-block marker-block");
       marker.appendChild(element("span", "marker-ink", block.html));

@@ -1,5 +1,7 @@
 // Markdown 解析与文档校验：把输入 Markdown 解析为渲染文档（meta + blocks）。
-// 纯函数，零外部依赖；被 render.mjs 与 validate.mjs 共同使用。
+// 被 render.mjs 与 validate.mjs 共同使用。
+
+import { METHODOLOGY_3X4 } from "../assets/methodology-3x4.mjs";
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (character) => ({
@@ -155,6 +157,29 @@ function parseDirective(name, content, lineNumber, inline) {
     return { type: "metrics", items };
   }
   throw new Error(`Unsupported directive :::${name} near line ${lineNumber}.`);
+}
+
+function fixedMethodology3x4Block(inline) {
+  const scenes = METHODOLOGY_3X4.scenes.map((value) => ({ raw: value, html: inline(value) }));
+  const entryPaths = METHODOLOGY_3X4.entryPaths.map((value) => ({ raw: value, html: inline(value) }));
+  const raw = [
+    METHODOLOGY_3X4.title,
+    METHODOLOGY_3X4.identity,
+    METHODOLOGY_3X4.scenesLabel,
+    ...METHODOLOGY_3X4.scenes,
+    METHODOLOGY_3X4.entryPathsLabel,
+    ...METHODOLOGY_3X4.entryPaths
+  ].join("\n");
+  return {
+    type: "methodology-3x4",
+    titleHtml: inline(METHODOLOGY_3X4.title),
+    identityHtml: inline(METHODOLOGY_3X4.identity),
+    scenesLabelHtml: inline(METHODOLOGY_3X4.scenesLabel),
+    scenes,
+    entryPathsLabelHtml: inline(METHODOLOGY_3X4.entryPathsLabel),
+    entryPaths,
+    raw
+  };
 }
 
 function extractFootnotes(body) {
@@ -343,11 +368,19 @@ function parseBlocks(body, meta, footnotes, lineOffset = 0) {
       continue;
     }
 
-    const directive = line.match(/^:::(\w[\w-]*)(?:\s+.*)?$/);
+    const directive = line.match(/^:::(\w[\w-]*)(?:\s+(.*))?$/);
     if (directive) {
       const name = directive[1];
       if (name === "pagebreak") {
         blocks.push({ type: "pagebreak" });
+        index += 1;
+        continue;
+      }
+      if (name === "methodology-3x4") {
+        if (directive[2]?.trim()) {
+          throw new Error(`:::methodology-3x4 does not accept parameters near line ${lineOffset + index + 1}.`);
+        }
+        blocks.push({ ...fixedMethodology3x4Block(inline), line: index + 1 });
         index += 1;
         continue;
       }
@@ -557,6 +590,16 @@ export function validateDocument(document) {
       action: "Add a concise risk disclosure grounded in the source material."
     });
   }
+  const methodologyIndexes = document.blocks
+    .map((block, index) => block.type === "methodology-3x4" ? index : -1)
+    .filter((index) => index >= 0);
+  if (methodologyIndexes.length > 1) {
+    addError("E_3X4_COMPONENT_MULTIPLE", "The fixed :::methodology-3x4 component may appear at most once.", {
+      actual: methodologyIndexes.length,
+      expected: "Zero or one :::methodology-3x4 directive",
+      action: "Keep only the first fixed 3×4 introduction before the article-specific mapping."
+    });
+  }
   const thumbnailIndexes = document.blocks.map((block, index) => block.type === "thumbnails" ? index : -1).filter((index) => index >= 0);
   if (!thumbnailIndexes.length) {
     addError("E_THUMBNAILS_REQUIRED", "Every carousel must end with source thumbnails.", {
@@ -605,6 +648,32 @@ export function validateDocument(document) {
     if (block.type === "footnotes") return block.items.map((item) => plainText(item.raw)).join(" ");
     return "";
   };
+  const methodologyReference = /3\s*[×xX*]\s*4/;
+  const methodologyReferences = document.blocks
+    .map((block, index) => ({ block, index, prose: proseForBlock(block) }))
+    .filter(({ block, prose }) => block.type !== "methodology-3x4" && methodologyReference.test(prose));
+  const coverReference = [document.meta.kicker, document.meta.title, document.meta.subtitle]
+    .some((value) => methodologyReference.test(plainText(value || "")));
+  if (coverReference) {
+    addError("E_3X4_COVER_REFERENCE", "The cover cannot mention 3×4 before the fixed body introduction.", {
+      expected: "Introduce 3×4 with :::methodology-3x4 in the body before the article-specific mapping",
+      action: "Remove the 3×4 label from the cover and keep the selected financial angle."
+    });
+  }
+  if (methodologyReferences.length && !methodologyIndexes.length) {
+    addError("E_3X4_COMPONENT_REQUIRED", "Body copy mentions 3×4 without the fixed introduction component.", {
+      line: methodologyReferences[0].block.line,
+      expected: "A :::methodology-3x4 directive before the first article-specific 3×4 reference",
+      action: "Insert the fixed directive after the factual causal chain and before the mapping; do not write the introduction manually."
+    });
+  } else if (methodologyReferences.some(({ index }) => index < methodologyIndexes[0])) {
+    const earlyReference = methodologyReferences.find(({ index }) => index < methodologyIndexes[0]);
+    addError("E_3X4_COMPONENT_ORDER", "Body copy mentions 3×4 before the fixed introduction component.", {
+      line: earlyReference?.block.line,
+      expected: ":::methodology-3x4 is the first reader-visible 3×4 reference",
+      action: "Move the fixed component before this reference."
+    });
+  }
   const forbiddenBodyTerms = [
     {
       term: "你",

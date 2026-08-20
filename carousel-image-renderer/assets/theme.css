@@ -335,6 +335,117 @@ del {
   white-space: nowrap;
 }
 
+.methodology-3x4 {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 760px;
+  padding: 28px 30px 30px;
+  background: linear-gradient(145deg, rgba(24, 95, 169, 0.055), rgba(255, 255, 255, 0.88));
+  border: 1px solid var(--accent-border);
+  border-radius: 18px;
+  break-inside: avoid;
+}
+
+.methodology-3x4-heading {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr);
+  align-items: start;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.methodology-3x4-diamond {
+  width: 7px;
+  height: 50px;
+  margin-top: 3px;
+  background: var(--accent);
+}
+
+.methodology-3x4-title {
+  color: var(--heading-ink);
+  font-family: var(--font-display);
+  font-size: 42px;
+  font-weight: 900;
+  line-height: 1.42;
+}
+
+.methodology-3x4-identity {
+  margin: 0 0 24px;
+  color: var(--soft-ink);
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: 650;
+  line-height: 1.55;
+}
+
+.methodology-3x4-group + .methodology-3x4-group {
+  margin-top: 24px;
+  padding-top: 22px;
+  border-top: 1px solid var(--soft-rule);
+}
+
+.methodology-3x4-label {
+  display: block;
+  margin-bottom: 14px;
+  color: var(--heading-ink);
+  font-size: 30px;
+  font-weight: 850;
+  line-height: 1.45;
+}
+
+.methodology-3x4-scenes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.methodology-3x4-scene {
+  padding: 13px 8px 14px;
+  color: var(--accent-deep);
+  background: var(--soft-accent);
+  border: 1px solid var(--accent-border);
+  border-radius: 999px;
+  font-size: 29px;
+  font-weight: 850;
+  line-height: 1.25;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.methodology-3x4-paths {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+}
+
+.methodology-3x4-path {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  min-height: 68px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--soft-rule);
+  border-radius: 12px;
+}
+
+.methodology-3x4-path-number {
+  color: var(--accent);
+  font-size: 23px;
+  font-weight: 900;
+  line-height: 1.55;
+}
+
+.methodology-3x4-path-copy {
+  color: var(--marker-ink);
+  font-size: 27px;
+  font-weight: 780;
+  line-height: 1.45;
+}
+
 .marker-block {
   color: var(--marker-ink);
   font-weight: 900;

@@ -113,7 +113,9 @@ title: 事务输出测试
 
 :::pagebreak
 
-第二页内容很短。
+:::methodology-3x4
+
+AI 基建对应当前场景，主体对应投资龙头。
 
 :::pagebreak
 
@@ -167,9 +169,14 @@ title: 事务输出测试
   assert.ok(debugResponse.manifest.blockingDiagnostics.some((item) => item.code === "E_PAGE_FILL_LOW"));
   assert.ok(debugResponse.manifest.debugTargets.fillErrorPages.length > 0);
   const firstBody = debugResponse.manifest.pageDetails.find((page) => page.kind === "body");
+  const methodologyPage = debugResponse.manifest.pageDetails.find((page) => page.features.includes("methodology-3x4"));
   assert.match(firstBody.text, /第一页内容很短/);
   assert.ok(firstBody.features.includes("image"));
   assert.ok(firstBody.visualRegions.some((region) => region.kind === "content-image" && region.width > 0 && region.height > 0));
+  assert.match(methodologyPage?.text || "", /3×4 是智富界提出的一种分析投资机会的框架/);
+  assert.match(methodologyPage?.text || "", /AI 基建[\s\S]*生成式大模型[\s\S]*AI 硬件/);
+  assert.match(methodologyPage?.text || "", /挑战龙头[\s\S]*加入龙头[\s\S]*成为龙头的代理或生态伙伴[\s\S]*投资龙头/);
+  assert.doesNotMatch(methodologyPage?.text || "", /商业模式|十二格/);
   await fs.access(path.join(debugDirectory, debugResponse.manifest.debugTargets.fillErrorPages[0]));
   assert.equal(await fs.readFile(path.join(outputDirectory, "01-cover.png"), "utf8"), "previous-image");
   assert.deepEqual(JSON.parse(await fs.readFile(path.join(outputDirectory, "manifest.json"), "utf8")), { previous: true });

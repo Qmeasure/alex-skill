@@ -26,6 +26,8 @@ source_pages: 2
 
 正文内容。
 
+:::methodology-3x4
+
 :::thumbnails
 ![来源一](../信源/a.png)
 :::
@@ -33,7 +35,7 @@ source_pages: 2
 
   const pageDetails = [
     { page: 1, kind: "cover", label: "cover", features: [], file: "01-cover.png", text: "封面标签\n审计样稿\n封面副标题", visualRegions: [{ kind: "cover-content", x: 1, y: 1, width: 8, height: 5 }] },
-    { page: 2, kind: "body", label: "section", features: ["callout", "risk"], file: "02-page.png", fill: 0.8, text: "第一段正文", visualRegions: [] },
+    { page: 2, kind: "body", label: "3×4 是什么", features: ["callout", "risk", "methodology-3x4"], file: "02-page.png", fill: 0.8, text: "3×4 是什么\n第一段正文", visualRegions: [] },
     { page: 3, kind: "body", label: "image", features: ["image"], file: "03-page.png", fill: 0.82, text: "带内容图片的正文", visualRegions: [{ kind: "content-image", x: 2, y: 2, width: 4, height: 4 }] },
     { page: 4, kind: "endcard", label: "endcard", features: [], file: "04-page.png", text: "末页文字", visualRegions: [] }
   ];
@@ -80,6 +82,12 @@ test("prepareAuditPackages creates two isolated, sanitized audit folders", async
   const pages = await fs.readFile(path.join(result.contextDirectory, "pages.md"), "utf8");
   assert.match(pages, /第 1 页｜封面[\s\S]*封面标签[\s\S]*第 2 页｜正文[\s\S]*第一段正文[\s\S]*第 3 页｜正文[\s\S]*带内容图片的正文/);
   assert.doesNotMatch(pages, /末页文字|第 4 页/);
+  const contextAudit = await fs.readFile(path.join(result.contextDirectory, "AUDIT.md"), "utf8");
+  const evidenceAudit = await fs.readFile(path.join(result.evidenceDirectory, "AUDIT.md"), "utf8");
+  assert.match(contextAudit, /第 2 页包含渲染器生成的 `methodology-3x4` 固定组件/);
+  assert.match(evidenceAudit, /第 2 页包含渲染器生成的 `methodology-3x4` 固定组件/);
+  assert.match(contextAudit, /不得审查、改写或要求补充审计包标记的固定组件文案/);
+  assert.match(evidenceAudit, /不核验或改写审计包标记的固定组件文案/);
   assert.deepEqual((await fs.readdir(path.join(result.evidenceDirectory, "visual"))).sort(), ["01-cover-content.png", "03-image-01.png"]);
   assert.deepEqual(
     await sharp(path.join(result.evidenceDirectory, "visual", "01-cover-content.png")).metadata().then(({ width, height }) => [width, height]),
