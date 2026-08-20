@@ -8,11 +8,12 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
-import { parseDocument, validateDocument, plainText } from "./parser.mjs";
+import { parseDocument, validateDocument } from "./parser.mjs";
 import { embedLocalMarkdownImages } from "./images.mjs";
 import { loadPlaywright, browserLaunchOptions, createStagingDirectory, discardStagingDirectory, commitOwnedOutputs } from "./browser.mjs";
 import { diagnosticError, diagnosticsError, diagnosticsFromError, formatDiagnostic, parseFailure } from "./diagnostics.mjs";
-import { buildDebugTargets, inspectLayout } from "./render/layout.mjs";
+import { inspectLayout } from "./render/layout.mjs";
+import { buildManifest, collectPageDetails } from "./render/manifest.mjs";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const SKILL_DIR = path.resolve(SCRIPT_DIR, "..");
@@ -263,95 +264,27 @@ async function render(inputPath, outputDirectory, endcardVariant = "", coverOnly
       files.push(fileName);
     }
 
-    const rawPageDetails = await page.evaluate(() => [...document.querySelectorAll(".page-card")].map((card, index) => {
-      const kind = card.classList.contains("endcard-page") ? "endcard" : (card.dataset.kind || "body");
-      const labelNode = card.querySelector(".cover-title, .methodology-3x4-title, .section-text, .subheading, .lead-block, .body-paragraph, .thumbnails-heading");
-      const features = [
-        ["risk", ".risk-block"],
-        ["callout", ".callout-block"],
-        ["table", ".markdown-table"],
-        ["image", ".markdown-image, .inline-markdown-image"],
-        ["metrics", ".metrics"],
-        ["methodology-3x4", ".methodology-3x4"]
-      ].filter(([, selector]) => card.querySelector(selector)).map(([name]) => name);
-      const textNodes = kind === "cover"
-        ? [...card.querySelectorAll(".cover-kicker, .cover-title, .cover-subtitle")]
-        : kind === "body" ? [card.querySelector(".page-flow")].filter(Boolean) : [];
-      const text = textNodes
-        .map((node) => node.innerText || node.textContent || "")
-        .join("\n")
-        .replace(/\r\n?/g, "\n")
-        .replace(/[ \t]+/g, " ")
-        .replace(/ *\n */g, "\n")
-        .replace(/\n{3,}/g, "\n\n")
-        .trim();
-      const cardRect = card.getBoundingClientRect();
-      const regionNodes = kind === "cover"
-        ? [["cover-content", card.querySelector(".cover-main")]]
-        : kind === "body"
-          ? [...card.querySelectorAll(".markdown-image, .inline-markdown-image")].map((node) => ["content-image", node])
-          : [];
-      const visualRegions = regionNodes.filter(([, node]) => node).map(([regionKind, node]) => {
-        const rect = node.getBoundingClientRect();
-        const x = Math.max(0, Math.floor(rect.left - cardRect.left));
-        const y = Math.max(0, Math.floor(rect.top - cardRect.top));
-        return {
-          kind: regionKind,
-          x,
-          y,
-          width: Math.min(cardRect.width - x, Math.ceil(rect.right - cardRect.left) - x),
-          height: Math.min(cardRect.height - y, Math.ceil(rect.bottom - cardRect.top) - y)
-        };
-      }).filter((region) => region.width > 0 && region.height > 0);
-      return {
-        page: index + 1,
-        kind,
-        label: (labelNode?.textContent || "").replace(/\s+/g, " ").trim().slice(0, 120),
-        features,
-        text,
-        visualRegions
-      };
-    }));
-    const fills = new Map((report.fillRatios || []).map((entry) => [entry.page, entry]));
-    const pageDetails = rawPageDetails
-      .filter((detail) => !coverOnly || detail.kind === "cover")
-      .map((detail) => {
-        const fill = fills.get(detail.page);
-        return {
-          ...detail,
-          file: `${String(detail.page).padStart(2, "0")}-${detail.kind === "cover" ? "cover" : "page"}.png`,
-          ...(fill ? { fill: fill.fill, lastBody: fill.last } : {})
-        };
-      });
-
-    const manifest = {
-      title: plainText(document.meta.title),
+    const pageDetails = await collectPageDetails(page, report, coverOnly);
+    const manifest = buildManifest({
+      document,
       endcard,
       style,
       coverOnly,
-      mode: debug ? "debug" : "formal",
-      deliveryReady: !debug && !coverOnly,
-      pages: files.length,
-      bodyPages: pageDetails.filter((detail) => detail.kind === "body").length,
-      totalPages: files.length,
-      width: PAGE_WIDTH,
-      height: PAGE_HEIGHT,
-      renderScale: RENDER_SCALE,
-      renderWidth: RENDER_WIDTH,
-      renderHeight: RENDER_HEIGHT,
-      resizeKernel: "lanczos3",
-      fonts: {
-        sans: "Source Han Sans SC",
-        serif: "Source Han Serif SC",
-        loadedFaces: fontReport.loadedFonts
-      },
+      debug,
       files,
       pageDetails,
-      ...(debug ? { debugTargets: buildDebugTargets(pageDetails, renderErrors) } : {}),
-      fillRatios: report.fillRatios || [],
+      fontReport,
+      report,
       warnings: validation.warnings,
-      blockingDiagnostics: debug ? renderErrors : []
-    };
+      renderErrors,
+      dimensions: {
+        pageWidth: PAGE_WIDTH,
+        pageHeight: PAGE_HEIGHT,
+        renderScale: RENDER_SCALE,
+        renderWidth: RENDER_WIDTH,
+        renderHeight: RENDER_HEIGHT
+      }
+    });
     await fs.writeFile(path.join(stagingDirectory, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
     await browser.close();
     browser = null;
