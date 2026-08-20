@@ -5,7 +5,8 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { qrAssetPathFor, resolveEndcardVariant, resolveStyleVariant } from "../scripts/render.mjs";
+import { resolveEndcardVariant, resolveStyleVariant } from "../scripts/render.mjs";
+import { qrAssetPathFor } from "../scripts/render/browser-session.mjs";
 import { buildBodyPageCountDiagnostics } from "../scripts/render/layout.mjs";
 
 function runNode(args, cwd) {
