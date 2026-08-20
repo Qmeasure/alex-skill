@@ -7,6 +7,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { qrAssetPathFor } from "../scripts/render/browser-session.mjs";
 import { buildBodyPageCountDiagnostics } from "../scripts/render/layout.mjs";
+import { commitOwnedOutputs, createStagingDirectory } from "../scripts/render/output.mjs";
 
 function runNode(args, cwd) {
   return new Promise((resolve, reject) => {
@@ -117,6 +118,36 @@ test("endcard variants keep native QR-free, guided QR, and legacy rejection cont
   ], projectRoot);
   assert.equal(result.code, 1, result.stderr || result.stdout);
   assert.equal(JSON.parse(result.stdout).errors[0]?.code, "E_ENDCARD_UNSUPPORTED");
+});
+
+test("output transaction replaces only owned files and rejects incomplete staging", async (context) => {
+  const workspace = await fs.mkdtemp(path.join(os.tmpdir(), "carousel-output-transaction-"));
+  context.after(() => fs.rm(workspace, { recursive: true, force: true }));
+  const outputDirectory = path.join(workspace, "视频图");
+  await fs.mkdir(outputDirectory, { recursive: true });
+  await fs.writeFile(path.join(outputDirectory, "01-cover.png"), "old-cover", "utf8");
+  await fs.writeFile(path.join(outputDirectory, "02-page.png"), "old-page", "utf8");
+  await fs.writeFile(path.join(outputDirectory, "manifest.json"), "old-manifest", "utf8");
+  await fs.writeFile(path.join(outputDirectory, "notes.txt"), "keep-me", "utf8");
+
+  const completeStaging = await createStagingDirectory(outputDirectory);
+  await fs.writeFile(path.join(completeStaging, "01-cover.png"), "new-cover", "utf8");
+  await fs.writeFile(path.join(completeStaging, "manifest.json"), "new-manifest", "utf8");
+  await commitOwnedOutputs(completeStaging, outputDirectory);
+  assert.equal(await fs.readFile(path.join(outputDirectory, "01-cover.png"), "utf8"), "new-cover");
+  assert.equal(await fs.readFile(path.join(outputDirectory, "manifest.json"), "utf8"), "new-manifest");
+  await assert.rejects(fs.access(path.join(outputDirectory, "02-page.png")));
+  assert.equal(await fs.readFile(path.join(outputDirectory, "notes.txt"), "utf8"), "keep-me");
+
+  const incompleteStaging = await createStagingDirectory(outputDirectory);
+  await fs.writeFile(path.join(incompleteStaging, "01-cover.png"), "incomplete-cover", "utf8");
+  await assert.rejects(
+    commitOwnedOutputs(incompleteStaging, outputDirectory),
+    /Staged render has no manifest\.json/
+  );
+  assert.equal(await fs.readFile(path.join(outputDirectory, "01-cover.png"), "utf8"), "new-cover");
+  assert.equal(await fs.readFile(path.join(outputDirectory, "manifest.json"), "utf8"), "new-manifest");
+  assert.equal(await fs.readFile(path.join(outputDirectory, "notes.txt"), "utf8"), "keep-me");
 });
 
 test("debug render exposes blocking layout pages without replacing formal output", { timeout: 60000 }, async (context) => {
