@@ -5,7 +5,15 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { parseDocument, validateDocument } from "../scripts/parser.mjs";
+import * as parser from "../scripts/parser.mjs";
+
+const {
+  normalizeDestination,
+  parseDocument,
+  plainText,
+  safeUrl,
+  validateDocument
+} = parser;
 
 function runNode(args, cwd) {
   return new Promise((resolve, reject) => {
@@ -22,6 +30,51 @@ function runNode(args, cwd) {
 function errorCodes(source) {
   return validateDocument(parseDocument(source)).errors.map((item) => item.code);
 }
+
+test("parser facade preserves representative AST and sanitization contracts", () => {
+  assert.deepEqual(Object.keys(parser), [
+    "normalizeDestination",
+    "parseDocument",
+    "plainText",
+    "safeUrl",
+    "validateDocument"
+  ]);
+  assert.equal(normalizeDestination(" <./chart.png> "), "./chart.png");
+  assert.equal(safeUrl("javascript:alert(1)"), "");
+  assert.equal(safeUrl("data:text/html,unsafe", "image"), "");
+  assert.equal(safeUrl("data:image/png;base64,AA", "image"), "data:image/png;base64,AA");
+  assert.equal(plainText("**标题** [链接](https://example.com) {accent}值{/accent} <b>粗</b>"), "标题 链接 值 粗");
+
+  const document = parseDocument(`---
+title: 组合契约
+---
+
+<span data-x="1">允许</span><script>拒绝</script>
+
+- 一级
+  - 二级
+
+| 指标 | 值 |
+| --- | ---: |
+| 收入 | **2** |
+
+![图](<data:image/png;base64,AA> "标题")
+
+[^note]: 脚注
+`);
+
+  assert.deepEqual(document.blocks.map((block) => block.type), ["paragraph", "list", "table", "image", "footnotes"]);
+  assert.deepEqual(document.blocks.map((block) => block.line), [5, 7, 10, 14, 16]);
+  assert.equal(document.blocks[0].html, "<span>允许</span>&lt;script&gt;拒绝&lt;/script&gt;");
+  assert.equal(document.blocks[1].items[0].children[0].items[0].raw, "二级");
+  assert.deepEqual(document.blocks[2].alignments, ["left", "right"]);
+  assert.equal(document.blocks[2].rows[0][1].html, "<strong>2</strong>");
+  assert.deepEqual(
+    { alt: document.blocks[3].alt, src: document.blocks[3].src, title: document.blocks[3].title },
+    { alt: "图", src: "data:image/png;base64,AA", title: "标题" }
+  );
+  assert.equal(document.blocks[4].items[0].html, "脚注");
+});
 
 test("hard requirements return stable error codes together", () => {
   const codes = errorCodes("# 旧版回退标题\n\n这段正文里有你。\n");
