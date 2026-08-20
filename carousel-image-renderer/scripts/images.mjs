@@ -4,7 +4,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { normalizeDestination } from "./parser.mjs";
+import { normalizeDestination } from "./parser/text.mjs";
 
 const IMAGE_MIME_TYPES = new Map([
   [".png", "image/png"],
