@@ -78,13 +78,13 @@ HITL 模式下提供 3 组方案，每组包含：
 
 完整阅读 [叙事与编辑规范](references/narrative-style.md) 和 [Markdown 渲染协议](references/content-format.md)。
 
-起草前先提醒自己：直接陈述事实、条件、口径和因果；证据边界只限制主张，不自动生成免责声明；不把读者未提出的误解、取材查证过程或写作纪律写进正文。
+起草前先提醒自己：直接陈述事实、条件、口径和因果；弃用缺少必要口径的数字和主张，不解释为什么不能使用；不把输入容器、读者未提出的误解、取材查证过程或写作纪律写进正文。
 
 根据 `editorial-brief.md` 编写 UTF-8 Markdown。使用本地信源和已记录的外部事实；强相关内容按 3×4 方法论显式映射，在首次具体映射前插入单行 `:::methodology-3x4`，不自行撰写或重复固定介绍。优先自动分页，并把 manifest 的 `thumbnailMarkdown` 原样放在全文最后。
 
 初稿完成后启动一只独立的 AIGC 风格 sub-agent，只把当前 Markdown 和以下任务交给它：
 
-`使用 qu-ai-wei 以 embedded mode 处理 <input.md>，再完整读取 <skill-dir>/references/defensive-negation-examples.md>，执行其中的候选搜索、逐项处理和复扫。按书面化财经自媒体语体处理；保留事实、数字、来源归属、用户选定的角度与标题承诺，以及全部 Markdown 结构、存在时的固定 :::methodology-3x4 指令和末尾 thumbnails。保留事实不等于逐句保留；允许删除整句、合并重复段落，禁止只把防御性废话换成同义表达。只输出完整终稿 Markdown，不修改文件，不输出说明。`
+`使用 qu-ai-wei 以 embedded mode 处理 <input.md>，再完整读取 <skill-dir>/references/narrative-style.md 和 <skill-dir>/references/defensive-negation-examples.md，执行其中的候选搜索、逐项处理和复扫。按书面化财经自媒体语体处理；保留事实、合格的权威来源归属、用户选定的角度与标题承诺，以及全部 Markdown 结构、存在时的固定 :::methodology-3x4 指令和末尾 thumbnails。删除输入容器和取材过程；无事实增量的证据免责声明连同不可用数字或论述分支一起删除，不得同义改写；悬空指代无法从当前稿件确定准确对象时直接删句，不得补写。只输出完整终稿 Markdown，不修改文件，不输出说明。`
 
 Main Agent 检查事实与结构后把返回结果写回 Markdown。AIGC 风格 sub-agent 只执行文字编辑，不决定事实口径、审计建议或是否交付；Main Agent 可以驳回其改动，但此后新增或重写的任何读者可见文字都必须再次经过同一 sub-agent。
 

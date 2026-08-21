@@ -31,6 +31,27 @@ function errorCodes(source) {
   return validateDocument(parseDocument(source)).errors.map((item) => item.code);
 }
 
+function completeArticle(body, title = "明确标题") {
+  return `---
+title: ${title}
+---
+
+${body}
+
+:::callout
+行业变化可能带来结构性机会。
+:::
+
+:::risk
+需求波动可能压低价格。
+:::
+
+:::thumbnails
+![](./page-01.png)
+:::
+`;
+}
+
 test("parser facade preserves representative AST and sanitization contracts", () => {
   assert.deepEqual(Object.keys(parser), [
     "normalizeDestination",
@@ -214,10 +235,9 @@ title: 明确标题
   assert.ok(errorCodes(source).includes("E_THUMBNAILS_POSITION"));
 });
 
-test("forbidden body terms cover visible prose and skip non-prose fields", () => {
+test("the second-person check covers visible prose and skips non-prose fields", () => {
   for (const { term, code } of [
-    { term: "你", code: "E_BODY_SECOND_PERSON" },
-    { term: "本文", code: "E_BODY_META_REFERENCE" }
+    { term: "你", code: "E_BODY_SECOND_PERSON" }
   ]) {
     const source = `---
 title: 明确标题
@@ -252,6 +272,105 @@ ${term}
     assert.deepEqual(errors.map((item) => item.line), [5, 7, 9], `${term} should only be reported from visible prose`);
     assert.ok(errors.every((item) => item.actual === `${term} × 1`));
   }
+});
+
+test("reader-facing integrity rejects source containers, unresolved references, and empty evidence disclaimers", () => {
+  for (const prose of [
+    "教材提到，AI 服务器需求正在增长。",
+    "原文指出，AI 服务器需求正在增长。",
+    "用户提供的讲义记录了 AI 服务器需求。",
+    "公开材料显示，AI 服务器需求正在增长。",
+    "课程认为 AI 服务器需求正在增长。"
+  ]) {
+    const sourceLeak = validateDocument(parseDocument(completeArticle(prose))).errors;
+    const sourceError = sourceLeak.find((item) => item.code === "E_INTERNAL_SOURCE_LEAKAGE");
+    assert.equal(sourceError?.line, 5, prose);
+  }
+
+  const example = validateDocument(parseDocument(completeArticle(
+    "这里没有给出“万亿”的统一币种和统计范围，因此它更适合作为量级过滤器。落到具体赛道时，要写清币种、统计范围和时间口径。"
+  ))).errors;
+  const referenceError = example.find((item) => item.code === "E_UNRESOLVED_REFERENCE");
+  const disclaimerError = example.find((item) => item.code === "E_EMPTY_EVIDENCE_DISCLAIMER");
+  assert.equal(referenceError?.line, 5);
+  assert.match(referenceError?.actual || "", /这里/);
+  assert.match(referenceError?.actual || "", /它/);
+  assert.equal(disclaimerError?.line, 5);
+  assert.match(disclaimerError?.action || "", /Delete the entire disclaimer sentence/);
+
+  for (const prose of [
+    "公开信息尚未披露单份订单金额。",
+    "现有材料只能确认订单已经签署。",
+    "订单兑现仍需进一步验证。",
+    "现阶段只能观察收入变化。"
+  ]) {
+    assert.ok(errorCodes(completeArticle(prose)).includes("E_EMPTY_EVIDENCE_DISCLAIMER"), prose);
+  }
+
+  for (const prose of [
+    "他认为 AI 服务器需求正在增长。",
+    "上述数据说明 AI 服务器需求正在增长。",
+    "该公司预计 AI 服务器需求正在增长。",
+    "英伟达上调其收入指引。",
+    "相关企业可能受益。",
+    "其他公司可能受益。"
+  ]) {
+    assert.ok(errorCodes(completeArticle(prose)).includes("E_UNRESOLVED_REFERENCE"), prose);
+  }
+});
+
+test("reader-facing integrity scans cover and structured prose but skips code, thumbnails, and fixed copy", () => {
+  const source = `---
+title: 教材里的这里
+---
+
+:::methodology-3x4
+
+| 主体 | 判断 |
+| --- | --- |
+| 英伟达 | 该公司上调收入指引 |
+
+\`\`\`text
+教材里的这里不属于自然语言正文检查。
+\`\`\`
+
+:::callout
+本文只提供研究视角。
+:::
+
+:::risk
+需求波动可能压低价格。
+:::
+
+:::thumbnails
+![教材里的这里](./page-01.png)
+:::
+`;
+  const errors = validateDocument(parseDocument(source));
+  assert.ok(errors.errors.some((item) => item.code === "E_INTERNAL_SOURCE_LEAKAGE" && item.location === "front matter title"));
+  assert.ok(errors.errors.some((item) => item.code === "E_UNRESOLVED_REFERENCE" && item.location === "front matter title"));
+  assert.ok(errors.errors.some((item) => item.code === "E_UNRESOLVED_REFERENCE" && item.line === 7));
+  assert.ok(errors.errors.some((item) => item.code === "E_INTERNAL_SOURCE_LEAKAGE" && item.line === 15));
+  assert.equal(errors.errors.filter((item) => item.code === "E_INTERNAL_SOURCE_LEAKAGE").length, 2);
+  assert.equal(errors.errors.filter((item) => item.code === "E_UNRESOLVED_REFERENCE").length, 2);
+});
+
+test("reader-facing integrity allows explicit facts, material negative states, and lexical lookalikes", () => {
+  const source = completeArticle(`英伟达应该提高供应链透明度，尤其需要披露交付进度。
+
+吉他产业具有利他和排他两类商业关系。
+
+土耳其公司课程收入与其他业务收入均实现增长。
+
+国家统计局公布 2025 年市场规模为 8 万亿元人民币，统计范围覆盖规模以上企业。
+
+英伟达尚未确认订单，框架协议尚未形成收入。
+
+IDC《2026 年人工智能基础设施报告》预计服务器需求增长。`);
+  const codes = errorCodes(source);
+  assert.equal(codes.includes("E_INTERNAL_SOURCE_LEAKAGE"), false);
+  assert.equal(codes.includes("E_UNRESOLVED_REFERENCE"), false);
+  assert.equal(codes.includes("E_EMPTY_EVIDENCE_DISCLAIMER"), false);
 });
 
 test("more than four endcard thumbnails fail with a dedicated code", () => {

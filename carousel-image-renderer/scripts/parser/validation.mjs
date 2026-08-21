@@ -1,5 +1,59 @@
 import { plainText } from "./text.mjs";
 
+const INTERNAL_SOURCE_LEAKAGE_PATTERNS = [
+  /教材|教科书|讲义/,
+  /(?:本课程|这门课程|该课程|第[一二三四五六七八九十0-9]+课|[一二三四五六七八九十0-9]+节课|课程(?:用|把|以|从|先|讲|介绍|指出|认为|提到|给出|写|说明|设|收场|开始|结束|分为))/,
+  /(?:用户提供|输入内容|前序对话|内部上下文|当前上下文|对话上下文|提示词|系统提示|内部指令|写作指令)/,
+  /(?:上文|下文|前文|后文|本段|本节|本章|这篇文章|本文|文章提供|文中|原文|信源)/,
+  /(?:本地|现有|公开|已有|输入|原始)(?:材料|资料|文档|文件)/,
+  /(?:根据|按照|来自)(?:这份|该份|上述|前述)?(?:材料|资料|文档|文件|教材|教科书|讲义|课程|原文)/,
+  /(?:材料|资料|文档|文件)(?:中|里)?(?:显示|表明|证明|指出|提到|认为|给出|写道|记录|介绍|列出|披露|说明|称)/
+];
+
+const NON_REFERENTIAL_LEXEMES = [
+  "土耳其", "其他",
+  "应该", "不该", "活该",
+  "尤其", "极其", "其实", "其次", "与其", "何其", "名副其实",
+  "吉他", "利他", "排他",
+  "因此", "此外", "彼此", "与此同时"
+];
+
+const UNRESOLVED_REFERENCE_PATTERNS = [
+  /上述|前述|下述|如上|如下|前者|后者|这里|那里|此处|该处|这边|那边/,
+  /我们|他们|她们|它们|本人|我|他|她|它|这|那|该|其|此/
+];
+
+const GENERIC_REFERENCE_PATTERNS = [
+  /(?:相关|其他)(?:公司|企业|机构|产品|技术|数据|指标|报告|研究|市场|行业|事件|政策|方案|框架|结论|数字|观点|问题|部分|内容)/
+];
+
+const EMPTY_EVIDENCE_DISCLAIMER_PATTERNS = [
+  /(?:这里|那里|教材|教科书|讲义|课程|原文|材料|资料|文档|文件|公开信息|现有信息|当前信息|已有信息|数据|数字|统计|口径|证据|披露).{0,24}(?:没有(?:给出|说明|明确|披露)|未(?:给出|说明|明确|披露)|不足以|缺少|不清(?:楚)?|不明确|不统一|无法(?:确认|判断|支持|验证))/,
+  /(?:公开|现有|已有|当前)?(?:材料|资料|信息|披露).{0,18}(?:只能|仅能|仅可).{0,18}(?:确认|判断|支持|说明)/,
+  /(?:只能|仅能|只适合|更适合|仅适合|可作为).{0,18}(?:参考|量级|过滤器|筛选器|判断依据|观察指标)/,
+  /(?:不能|无法)(?:据此|仅凭|直接|简单).{0,24}(?:判断|推断|得出|外推|证明|确认)/,
+  /(?:仍需|还需|需要进一步|有待).{0,18}(?:验证|核实|观察|跟踪|明确|补充|确认)/,
+  /(?:目前|现阶段|当前)(?:只能|仅能|仅可).{0,24}(?:确认|判断|观察|看到)/
+];
+
+function collectMatches(text, patterns) {
+  const matches = new Set();
+  patterns.forEach((pattern) => {
+    const flags = pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`;
+    for (const match of String(text).matchAll(new RegExp(pattern.source, flags))) {
+      if (match[0]) matches.add(match[0]);
+    }
+  });
+  return [...matches];
+}
+
+function maskLexemes(text, lexemes) {
+  return lexemes.reduce(
+    (result, lexeme) => result.split(lexeme).join(" ".repeat(lexeme.length)),
+    String(text)
+  );
+}
+
 export function validateDocument(document) {
   const errors = [];
   const warnings = [];
@@ -113,6 +167,54 @@ export function validateDocument(document) {
     if (block.type === "footnotes") return block.items.map((item) => plainText(item.raw)).join(" ");
     return "";
   };
+  const visibleSegments = [
+    { prose: plainText(document.meta.kicker || ""), location: "front matter kicker" },
+    { prose: plainText(document.meta.title || ""), location: "front matter title" },
+    { prose: plainText(document.meta.subtitle || ""), location: "front matter subtitle" },
+    ...document.blocks
+      .filter((block) => block.type !== "methodology-3x4")
+      .map((block) => ({ prose: proseForBlock(block), line: block.line }))
+  ].filter(({ prose }) => prose);
+  visibleSegments.forEach(({ prose, line, location }) => {
+    const sourceLeaks = collectMatches(prose, INTERNAL_SOURCE_LEAKAGE_PATTERNS);
+    if (sourceLeaks.length) {
+      addError("E_INTERNAL_SOURCE_LEAKAGE", "Reader-facing copy exposes an internal source container or writing context.", {
+        line,
+        location,
+        actual: sourceLeaks.join("、").slice(0, 160),
+        expected: "Facts stated directly, with only necessary authoritative attribution",
+        action: "Delete the source wrapper and state the supported fact directly; if no standalone fact remains, delete the sentence."
+      });
+    }
+
+    const referenceText = maskLexemes(prose, NON_REFERENTIAL_LEXEMES);
+    const unresolvedReferences = [
+      ...new Set([
+        ...collectMatches(referenceText, UNRESOLVED_REFERENCE_PATTERNS),
+        ...collectMatches(prose, GENERIC_REFERENCE_PATTERNS)
+      ])
+    ];
+    if (unresolvedReferences.length) {
+      addError("E_UNRESOLVED_REFERENCE", "Reader-facing copy uses a pronoun or contextual pointer instead of an explicit subject.", {
+        line,
+        location,
+        actual: unresolvedReferences.join("、").slice(0, 160),
+        expected: "The exact person, company, metric, event, document, method, or scope named where it is used",
+        action: "Replace every reference with the exact supported subject; delete the sentence rather than inventing a referent."
+      });
+    }
+
+    const emptyDisclaimers = collectMatches(prose, EMPTY_EVIDENCE_DISCLAIMER_PATTERNS);
+    if (emptyDisclaimers.length) {
+      addError("E_EMPTY_EVIDENCE_DISCLAIMER", "Reader-facing copy discusses missing evidence or reading limits without adding a usable fact.", {
+        line,
+        location,
+        actual: emptyDisclaimers.join("、").slice(0, 200),
+        expected: "A concrete fact, applicable scope, condition, or causal relationship",
+        action: "Delete the entire disclaimer sentence and any unsupported number or argument branch; do not paraphrase it into another caution."
+      });
+    }
+  });
   const methodologyReference = /3\s*[×xX*]\s*4/;
   const methodologyReferences = document.blocks
     .map((block, index) => ({ block, index, prose: proseForBlock(block) }))
@@ -147,13 +249,6 @@ export function validateDocument(document) {
       expected: "Objective wording with the subject omitted or named explicitly",
       action: "Rewrite the sentence without second-person or generic audience substitutions."
     },
-    {
-      term: "本文",
-      code: "E_BODY_META_REFERENCE",
-      message: "Body copy must not refer to itself with “本文”.",
-      expected: "Direct narration of the subject, evidence, or conclusion",
-      action: "Name the event or subject directly, or remove the meta-reference."
-    }
   ];
   document.blocks.forEach((block) => {
     const prose = proseForBlock(block);

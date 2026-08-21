@@ -88,6 +88,9 @@ test("prepareAuditPackages creates two isolated, sanitized audit folders", async
   assert.match(evidenceAudit, /第 2 页包含渲染器生成的 `methodology-3x4` 固定组件/);
   assert.match(contextAudit, /不得审查、改写或要求补充审计包标记的固定组件文案/);
   assert.match(evidenceAudit, /不核验或改写审计包标记的固定组件文案/);
+  assert.match(contextAudit, /内部来源容器/);
+  assert.match(contextAudit, /`BLOCKER`/);
+  assert.match(contextAudit, /无事实增量的证据免责声明/);
   assert.deepEqual((await fs.readdir(path.join(result.evidenceDirectory, "visual"))).sort(), ["01-cover-content.png", "03-image-01.png"]);
   assert.deepEqual(
     await sharp(path.join(result.evidenceDirectory, "visual", "01-cover-content.png")).metadata().then(({ width, height }) => [width, height]),

@@ -253,7 +253,7 @@ AI 基建对应当前场景，主体对应投资龙头。
 
   await fs.writeFile(inputPath, source.replace(
     "第一页内容很短，包含",
-    "第一页先提到 3×4，再展示固定组件，形成正式交付顺序错误。页面包含"
+    "第一页先提到 3×4，再展示固定组件，形成正式交付顺序错误。教材提到服务器需求增长。这里没有给出“万亿”的统一币种和统计范围，因此它更适合作为量级过滤器。页面包含"
   ), "utf8");
   const debugResult = await runNode(["scripts/render.mjs", inputPath, "--output", outputDirectory, "--debug", "--json"], projectRoot);
   assert.equal(debugResult.code, 0, debugResult.stderr || debugResult.stdout);
@@ -264,6 +264,9 @@ AI 基建对应当前场景，主体对应投资龙头。
   assert.equal(debugResponse.manifest.mode, "debug");
   assert.equal(debugResponse.manifest.deliveryReady, false);
   assert.ok(debugResponse.manifest.blockingDiagnostics.some((item) => item.code === "E_3X4_COMPONENT_ORDER" && item.phase === "validation"));
+  assert.ok(debugResponse.manifest.blockingDiagnostics.some((item) => item.code === "E_INTERNAL_SOURCE_LEAKAGE" && item.phase === "validation"));
+  assert.ok(debugResponse.manifest.blockingDiagnostics.some((item) => item.code === "E_UNRESOLVED_REFERENCE" && item.phase === "validation"));
+  assert.ok(debugResponse.manifest.blockingDiagnostics.some((item) => item.code === "E_EMPTY_EVIDENCE_DISCLAIMER" && item.phase === "validation"));
   assert.ok(debugResponse.manifest.blockingDiagnostics.some((item) => item.code === "E_PAGE_FILL_LOW" && item.phase === "layout"));
   assert.ok(debugResponse.manifest.debugTargets.fillErrorPages.length > 0);
   const firstBody = debugResponse.manifest.pageDetails.find((page) => page.kind === "body");

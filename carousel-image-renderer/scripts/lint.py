@@ -9,8 +9,6 @@ from pathlib import Path
 
 AI_BLACKLISTED_PHRASES = (
     "证据最完整的落点",
-    "这条线索",
-    "这项映射",
     "先说清楚",
 )
 

@@ -59,8 +59,6 @@ test("lint blocks exact AI blacklist phrases outside code and thumbnails", async
 title: 证据最完整的落点
 ---
 
-这条线索需要重写。
-这项映射需要重写。
 先说清楚背景。
 
 \`\`\`text
@@ -68,7 +66,7 @@ title: 证据最完整的落点
 \`\`\`
 
 :::thumbnails
-![这条线索](./page.png)
+![缩略图](./page.png)
 :::
 `, "utf8");
 
@@ -79,8 +77,6 @@ title: 证据最完整的落点
   assert.equal(response.ok, false);
   assert.deepEqual(response.errors.map((item) => item.actual), [
     "证据最完整的落点",
-    "这条线索",
-    "这项映射",
     "先说清楚"
   ]);
 });
