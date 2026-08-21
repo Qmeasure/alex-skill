@@ -6,6 +6,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { qrAssetPathFor } from "../scripts/render/browser-session.mjs";
+import { loadRenderDocument } from "../scripts/render/document.mjs";
 import { buildBodyPageCountDiagnostics } from "../scripts/render/layout.mjs";
 import { commitOwnedOutputs, createStagingDirectory } from "../scripts/render/output.mjs";
 
@@ -103,6 +104,43 @@ test("unsupported render styles are rejected with a stable diagnostic", async ()
   assert.equal(JSON.parse(result.stdout).errors[0]?.code, "E_STYLE_UNSUPPORTED");
 });
 
+test("debug document loading preserves formal validation blockers but not parse failures", async (context) => {
+  const workspace = await fs.mkdtemp(path.join(os.tmpdir(), "carousel-debug-validation-"));
+  context.after(() => fs.rm(workspace, { recursive: true, force: true }));
+  const inputPath = path.join(workspace, "input.md");
+  await fs.writeFile(inputPath, `---
+title: 调试预览
+---
+
+正文直接讨论 3×4 映射，但还没有插入固定组件。
+
+:::callout
+调试产物用于定位正式交付问题。
+:::
+
+:::risk
+未经修复的调试稿不能交付。
+:::
+
+:::thumbnails
+![](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAEAQH/XPWsWQAAAABJRU5ErkJggg==)
+:::
+`, "utf8");
+
+  await assert.rejects(
+    loadRenderDocument(inputPath),
+    (error) => error.diagnostics?.some((item) => item.code === "E_3X4_COMPONENT_REQUIRED")
+  );
+  const debugDocument = await loadRenderDocument(inputPath, { debug: true });
+  assert.ok(debugDocument.validation.errors.some((item) => item.code === "E_3X4_COMPONENT_REQUIRED"));
+
+  await fs.writeFile(inputPath, ":::risk\n未闭合的指令\n", "utf8");
+  await assert.rejects(
+    loadRenderDocument(inputPath, { debug: true }),
+    (error) => error.diagnostics?.[0]?.code === "E_MARKDOWN_PARSE"
+  );
+});
+
 test("endcard variants keep native QR-free, guided QR, and legacy rejection contracts", async () => {
   assert.equal(qrAssetPathFor("native"), null);
   assert.match(qrAssetPathFor("guided"), /zhifujie-qr\.png$/);
@@ -158,7 +196,7 @@ test("debug render exposes blocking layout pages without replacing formal output
   await fs.mkdir(outputDirectory, { recursive: true });
   await fs.writeFile(path.join(outputDirectory, "01-cover.png"), "previous-image", "utf8");
   await fs.writeFile(path.join(outputDirectory, "manifest.json"), "{\"previous\":true}\n", "utf8");
-  await fs.writeFile(inputPath, `---
+  const source = `---
 title: 事务输出测试
 ---
 
@@ -201,7 +239,8 @@ AI 基建对应当前场景，主体对应投资龙头。
 :::thumbnails
 ![](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAEAQH/XPWsWQAAAABJRU5ErkJggg==)
 :::
-`, "utf8");
+`;
+  await fs.writeFile(inputPath, source, "utf8");
 
   const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
   const result = await runNode(["scripts/render.mjs", inputPath, "--output", outputDirectory, "--json"], projectRoot);
@@ -212,6 +251,10 @@ AI 基建对应当前场景，主体对应投资龙头。
   assert.equal(await fs.readFile(path.join(outputDirectory, "01-cover.png"), "utf8"), "previous-image");
   assert.deepEqual(JSON.parse(await fs.readFile(path.join(outputDirectory, "manifest.json"), "utf8")), { previous: true });
 
+  await fs.writeFile(inputPath, source.replace(
+    "第一页内容很短，包含",
+    "第一页先提到 3×4，再展示固定组件，形成正式交付顺序错误。页面包含"
+  ), "utf8");
   const debugResult = await runNode(["scripts/render.mjs", inputPath, "--output", outputDirectory, "--debug", "--json"], projectRoot);
   assert.equal(debugResult.code, 0, debugResult.stderr || debugResult.stdout);
   const debugResponse = JSON.parse(debugResult.stdout);
@@ -220,11 +263,12 @@ AI 基建对应当前场景，主体对应投资龙头。
   assert.equal(debugResponse.manifest.style, "new");
   assert.equal(debugResponse.manifest.mode, "debug");
   assert.equal(debugResponse.manifest.deliveryReady, false);
-  assert.ok(debugResponse.manifest.blockingDiagnostics.some((item) => item.code === "E_PAGE_FILL_LOW"));
+  assert.ok(debugResponse.manifest.blockingDiagnostics.some((item) => item.code === "E_3X4_COMPONENT_ORDER" && item.phase === "validation"));
+  assert.ok(debugResponse.manifest.blockingDiagnostics.some((item) => item.code === "E_PAGE_FILL_LOW" && item.phase === "layout"));
   assert.ok(debugResponse.manifest.debugTargets.fillErrorPages.length > 0);
   const firstBody = debugResponse.manifest.pageDetails.find((page) => page.kind === "body");
   const methodologyPage = debugResponse.manifest.pageDetails.find((page) => page.features.includes("methodology-3x4"));
-  assert.match(firstBody.text, /第一页内容很短/);
+  assert.match(firstBody.text, /第一页先提到 3×4/);
   assert.ok(firstBody.features.includes("image"));
   assert.ok(firstBody.visualRegions.some((region) => region.kind === "content-image" && region.width > 0 && region.height > 0));
   assert.match(methodologyPage?.text || "", /3×4 是智富界提出的一种分析投资机会的框架/);

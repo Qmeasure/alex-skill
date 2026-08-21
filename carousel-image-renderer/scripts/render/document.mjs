@@ -4,7 +4,7 @@ import { embedLocalMarkdownImages } from "../images.mjs";
 import { parseDocument, validateDocument } from "../parser.mjs";
 import { diagnosticError, diagnosticsError, formatDiagnostic, parseFailure } from "../diagnostics.mjs";
 
-export async function loadRenderDocument(inputPath, { coverOnly = false } = {}) {
+export async function loadRenderDocument(inputPath, { coverOnly = false, debug = false } = {}) {
   let rawSource;
   try {
     rawSource = await fs.readFile(inputPath, "utf8");
@@ -40,7 +40,7 @@ export async function loadRenderDocument(inputPath, { coverOnly = false } = {}) 
   }
 
   const validation = validateDocument(document);
-  if (validation.errors.length) throw diagnosticsError(validation.errors);
+  if (validation.errors.length && !debug) throw diagnosticsError(validation.errors);
   validation.warnings.forEach((warning) => process.stderr.write(`${formatDiagnostic(warning, "Warning")}\n`));
   return { document, validation };
 }

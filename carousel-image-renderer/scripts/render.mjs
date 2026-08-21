@@ -90,7 +90,7 @@ async function render(inputPath, outputDirectory, endcardVariant = "", coverOnly
   const debugAction = debug
     ? `Inspect the diagnostic PNGs in "${renderedOutputDirectory}", including the failing page and adjacent pages.`
     : `Run the same render command with --debug; diagnostic PNGs will be written to "${debugOutputDirectory}" without replacing formal output.`;
-  const { document, validation } = await loadRenderDocument(inputPath, { coverOnly });
+  const { document, validation } = await loadRenderDocument(inputPath, { coverOnly, debug });
 
   const resources = await loadBrowserResources(document, { style, endcard });
 
@@ -125,6 +125,7 @@ async function render(inputPath, outputDirectory, endcardVariant = "", coverOnly
         fontReport,
         report,
         warnings: validation.warnings,
+        validationErrors: validation.errors,
         renderErrors,
         dimensions
       });
@@ -154,6 +155,9 @@ async function main() {
   if (options.json) {
     process.stdout.write(`${JSON.stringify({ ok: true, outputDirectory: renderedOutputDirectory, manifest }, null, 2)}\n`);
   } else {
+    if (options.debug) {
+      manifest.blockingDiagnostics.forEach((item) => process.stderr.write(`${formatDiagnostic(item, "Formal blocker")}\n`));
+    }
     const label = options.debug ? "debug page(s)" : "page(s)";
     process.stdout.write(`Rendered ${manifest.pages} ${label} to ${renderedOutputDirectory}\n`);
     manifest.files.forEach((file) => process.stdout.write(`${path.join(renderedOutputDirectory, file)}\n`));

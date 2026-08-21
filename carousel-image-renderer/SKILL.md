@@ -98,9 +98,7 @@ python "<skill-dir>/scripts/lint.py" <input.md> --json
 node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图" --json
 ```
 
-修复全部硬错误和 lint 错误；逐项处理或明确接受 lint 告警。
-
-正式渲染因页面填充、溢出或正文页数范围失败时，用相同参数添加 `--debug`；以诊断页和 manifest 中的 `bodyPages` 为准修改正文后重新正式渲染。不得通过重复内容或无意义分页满足页数要求，也不得审计或交付 debug 产物。
+验证或正式渲染报告错误且需要查看中间视觉结果时，用相同渲染参数添加 `--debug`。Debug 会保留可渲染的正式交付与布局错误并继续把诊断产物写入独立目录；Markdown 解析、资源加载或输出失败仍会终止。根据诊断信息、诊断页和 manifest 中的 `bodyPages` 修改正文，修复全部硬错误和 lint 错误，逐项处理或明确接受 lint 告警后重新正式渲染。不得通过重复内容或无意义分页满足页数要求，也不得审计或交付 debug 产物。
 
 ### 7. 审计并交付
 

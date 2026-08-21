@@ -75,9 +75,14 @@ export function buildManifest({
   fontReport,
   report,
   warnings,
+  validationErrors,
   renderErrors,
   dimensions
 }) {
+  const blockingDiagnostics = debug ? [
+    ...validationErrors.map((item) => ({ ...item, phase: "validation" })),
+    ...renderErrors.map((item) => ({ ...item, phase: "layout" }))
+  ] : [];
   return {
     title: plainText(document.meta.title),
     endcard,
@@ -104,6 +109,6 @@ export function buildManifest({
     ...(debug ? { debugTargets: buildDebugTargets(pageDetails, renderErrors) } : {}),
     fillRatios: report.fillRatios || [],
     warnings,
-    blockingDiagnostics: debug ? renderErrors : []
+    blockingDiagnostics
   };
 }
