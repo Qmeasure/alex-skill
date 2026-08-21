@@ -11,13 +11,14 @@ const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const SKILL_DIR = path.resolve(path.dirname(SCRIPT_PATH), "..");
 
 function parseArguments(argv) {
-  const options = { input: "", workspace: "", json: false, help: false };
+  const options = { input: "", workspace: "", json: false, debug: false, help: false };
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index];
     if (value === "--workspace") {
       options.workspace = argv[index + 1] || "";
       index += 1;
     } else if (value === "--json") options.json = true;
+    else if (value === "--debug") options.debug = true;
     else if (value === "--help" || value === "-h") options.help = true;
     else if (value.startsWith("-")) throw new Error(`Unknown option: ${value}`);
     else if (!options.input) options.input = value;
@@ -128,14 +129,15 @@ function buildVisualCrops(visiblePages, width, height) {
   return crops;
 }
 
-export async function prepareAuditPackages({ inputPath, workspace }) {
+export async function prepareAuditPackages({ inputPath, workspace, debug = false }) {
   const resolvedWorkspace = path.resolve(workspace);
   const resolvedInput = path.resolve(inputPath);
-  const renderDirectory = path.join(resolvedWorkspace, "视频图");
+  const contentDirectory = path.join(resolvedWorkspace, "视频图");
+  const renderDirectory = debug ? `${contentDirectory}.debug` : contentDirectory;
   const renderManifestPath = path.join(renderDirectory, "manifest.json");
-  const sourceManifestPath = path.join(renderDirectory, "source-manifest.json");
-  const inkstoneDirectory = path.join(renderDirectory, "inkstone-results");
-  const webResearchPath = path.join(renderDirectory, "web-research.md");
+  const sourceManifestPath = path.join(contentDirectory, "source-manifest.json");
+  const inkstoneDirectory = path.join(contentDirectory, "inkstone-results");
+  const webResearchPath = path.join(contentDirectory, "web-research.md");
   const outputRoot = path.join(resolvedWorkspace, "审计包");
 
   let source;
@@ -149,10 +151,15 @@ export async function prepareAuditPackages({ inputPath, workspace }) {
   }
   const article = sanitizeAuditMarkdown(source);
   const renderManifest = await readJson(renderManifestPath, "E_AUDIT_RENDER_MANIFEST");
-  if (renderManifest.mode !== "formal" || renderManifest.deliveryReady !== true) {
-    throw diagnosticError("E_AUDIT_RENDER_MANIFEST", "Audit packages require a delivery-ready formal render.", {
+  const expectedMode = debug ? "debug" : "formal";
+  const expectedDeliveryReady = !debug;
+  if (renderManifest.mode !== expectedMode || renderManifest.deliveryReady !== expectedDeliveryReady) {
+    throw diagnosticError("E_AUDIT_RENDER_MANIFEST", debug
+      ? "Debug audit packages require a non-delivery debug render."
+      : "Audit packages require a delivery-ready formal render.", {
       location: renderManifestPath,
-      actual: `mode=${renderManifest.mode}, deliveryReady=${renderManifest.deliveryReady}`
+      actual: `mode=${renderManifest.mode}, deliveryReady=${renderManifest.deliveryReady}`,
+      expected: `mode=${expectedMode}, deliveryReady=${expectedDeliveryReady}`
     });
   }
   const pageDetails = Array.isArray(renderManifest.pageDetails) ? renderManifest.pageDetails : [];
@@ -282,11 +289,11 @@ export async function prepareAuditPackages({ inputPath, workspace }) {
 async function main() {
   const options = parseArguments(process.argv.slice(2));
   if (options.help) {
-    process.stdout.write("Usage: node prepare-audit.mjs <input.md> --workspace <workspace> [--json]\n");
+    process.stdout.write("Usage: node prepare-audit.mjs <input.md> --workspace <workspace> [--debug] [--json]\n");
     return;
   }
   if (!options.input || !options.workspace) throw new Error("Input Markdown and --workspace are required.");
-  const result = await prepareAuditPackages({ inputPath: options.input, workspace: options.workspace });
+  const result = await prepareAuditPackages({ inputPath: options.input, workspace: options.workspace, debug: options.debug });
   if (options.json) process.stdout.write(`${JSON.stringify({ ok: true, ...result }, null, 2)}\n`);
   else {
     process.stdout.write(`Context audit package: ${result.contextDirectory}\n`);

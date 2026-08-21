@@ -98,7 +98,7 @@ python "<skill-dir>/scripts/lint.py" <input.md> --json
 node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图" --json
 ```
 
-验证或正式渲染报告错误且需要查看中间视觉结果时，用相同渲染参数添加 `--debug`。Debug 会保留可渲染的正式交付与布局错误并继续把诊断产物写入独立目录；Markdown 解析、资源加载或输出失败仍会终止。根据诊断信息、诊断页和 manifest 中的 `bodyPages` 修改正文，修复全部硬错误和 lint 错误，逐项处理或明确接受 lint 告警后重新正式渲染。不得通过重复内容或无意义分页满足页数要求，也不得审计或交付 debug 产物。
+验证或正式渲染报告错误且需要查看中间视觉结果时，用相同渲染参数添加 `--debug`。Debug 会保留可渲染的正式交付与布局错误并继续把诊断产物写入独立目录；Markdown 解析、资源加载或输出失败仍会终止。根据诊断信息、诊断页和 manifest 中的 `bodyPages` 修改正文，修复全部硬错误和 lint 错误，逐项处理或明确接受 lint 告警后重新正式渲染。不得通过重复内容或无意义分页满足页数要求。
 
 ### 7. 审计并交付
 
@@ -108,7 +108,9 @@ node "<skill-dir>/scripts/render.mjs" <input.md> --output "<workspace>/视频图
 node "<skill-dir>/scripts/prepare-audit.mjs" <input.md> --workspace "<workspace>" --json
 ```
 
-上下文审计包只包含正式渲染后的逐页可见文字；事实、证据与视觉审计包只提供封面标题内容区和正文内容图片的裁剪图，不提供整页 PNG。
+审计第 6 步生成的 debug 成品时，在同一命令中添加 `--debug`；其余审计流程不变。Debug 成品不得交付，完成审计修改后仍须重新正式渲染。
+
+上下文审计包只包含所选渲染成品的逐页可见文字；事实、证据与视觉审计包只提供封面标题内容区和正文内容图片的裁剪图，不提供整页 PNG。
 
 第一轮并行启动两个相互独立的 sub-agent，只把脚本返回的对应文件夹交给它：
 
