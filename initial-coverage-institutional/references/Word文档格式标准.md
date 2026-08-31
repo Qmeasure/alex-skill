@@ -46,7 +46,7 @@ logo 与机构名是硬要求，任何一页缺失都不算合格。
 
 - 左侧留空
 - 右侧 logo 小图标（高 0.5 cm）+「智富界」，9pt 加粗，深蓝 `#1B3A6B`
-- 页眉下方一条深蓝 `#1B3A6B` 细线，粗细 4（0.5pt）
+- 页眉下方一条深蓝 `#1B3A6B` 细线，粗细 4（0.5pt）。这条线用页眉段落的 `pBdr` 下边框实现；首页页眉按规范留空，不带线。交付前由 `scripts/checks/check_rules.py` 断言至少一个页眉部件带这条线
 
 **页脚**：左侧留空，右侧 Word 页码域，9pt，深蓝 `#1B3A6B`。页码必须是域，不是手打数字。
 
@@ -101,7 +101,7 @@ OOXML 层面，每处文字的 `w:rFonts` 三个属性都要设为 `Source Han S
 - 每个 `tc` 必须有 `tcW`，同样 `type="dxa"`
 - **三个 `tc` 都要设垂直对齐为顶端**。默认的垂直居中会把较短的那一栏推到中间，两栏起始行错位、上下各留一段空白
 - 左栏放报告摘要，右栏放投资数据块，中间列空
-- **右栏 `tc` 设左边框**：深蓝 `#1B3A6B`、粗细 4（0.5pt），上下贯穿整个右栏，把投资数据区与左侧摘要分开。这是全文唯一允许出现的竖线——正文表格一律只用横向分隔和隔行底色，不加竖框
+- **右栏 `tc` 设左边框**：深蓝 `#1B3A6B`、粗细 4（0.5pt），上下贯穿整个右栏，把投资数据区与左侧摘要分开。这是全文唯一允许出现的竖线——正文表格一律只用横向分隔和隔行底色，不加竖框。交付前由 `scripts/checks/check_rules.py` 断言：这条竖线在位，且全文深蓝竖边框恰好只有这一处
 
 首页必须严格收在一页内。左栏摘要要把版面写满——摘要短了页面下半部会空一大块，那是内容不足，不是留白设计。评级、目标价、当前价、上行空间、AI 研究团队块和二维码一个都不能省。
 
@@ -231,6 +231,7 @@ const KV_L = 1280, KV_R = KV_W - KV_L;
 
     ```bash
     python scripts/checks/check_render.py 输出.pdf
+    python scripts/checks/check_rules.py 输出.docx
     python scripts/checks/check_render.py 样张.pdf --sample --pages-min 3 --pages-max 3
     python scripts/checks/check_render.py 输出.pdf --pre-ipo    # 拟上市标的
     ```
