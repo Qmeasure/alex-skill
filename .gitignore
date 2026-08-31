@@ -10,3 +10,5 @@ AGENTS.md
 .env
 .venv/
 .python-version
+node_modules/
+.scratch/

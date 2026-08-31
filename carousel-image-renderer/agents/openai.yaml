@@ -1,0 +1,4 @@
+interface:
+  display_name: "智富界轮播图"
+  short_description: "将本地多信源制作成面向泛金融读者的智富界品牌轮播图"
+  default_prompt: "Use $carousel-image-renderer to turn the local sources into a source-grounded 智富界 financial-media carousel."

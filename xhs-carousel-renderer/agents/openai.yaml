@@ -1,4 +1,0 @@
-interface:
-  display_name: "小红书图文轮播渲染"
-  short_description: "把文章排版成参考图风格的多页小红书 PNG 轮播图"
-  default_prompt: "Use $xhs-carousel-renderer to turn this article into a polished multi-page Xiaohongshu image carousel."
