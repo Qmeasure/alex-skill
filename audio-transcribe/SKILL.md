@@ -25,6 +25,7 @@ python3 <skill-dir>/scripts/transcribe.py <音频文件> [输出.txt] [--plain]
 
 - 豆包(标准版 2.0):`VOLCENGINE_ASR_APP_KEY`
 - OSS 中转上传(必需):`ALIBABA_CLOUD_ACCESS_KEY_ID`、`ALIBABA_CLOUD_ACCESS_KEY_SECRET`,可选 `AUDIO_TRANSCRIBE_OSS_ENDPOINT`(默认 `oss-cn-shenzhen.aliyuncs.com`)、`AUDIO_TRANSCRIBE_OSS_BUCKET`(默认 `audio-transcipt`)
+- 热词表(可选):`VOLC_BOOSTING_TABLE_ID`,在[控制台>自学习平台](https://console.volcengine.com/speech/new/hot-word)建词表后拿到的 ID。不配就不带 `corpus` 字段,识别照常跑
 
 以上 key 已经写在 skill 根目录的 `.env` 里(权限 600),脚本启动时自动加载,不需要手动 export。要换 key 直接编辑该文件即可;`.env` 从不进版本控制、不回显到日志或对话。任何验证都只报告字段是否存在和 API 状态,不输出 AK/SK、签名 URL 或原始请求。
 
@@ -56,6 +57,9 @@ python3 scripts/transcribe.py podcast.mp3 --plain
 - **OSS 中转**:归一化后的音频先传到中转桶拿签名 URL(有效期 4 小时),再提交任务、轮询查询接口,结果到手后立刻删除该 OSS 临时对象
 - **时长上限**:标准版单文件最长 5 小时、512MB,不再需要为绕过体积限制而切块
 - **轮询**:提交后每 `VOLC_POLL_INTERVAL`(默认 3s)查询一次,状态码 `20000001`/`20000002` 表示处理中/排队中继续等,超过 `VOLC_POLL_TIMEOUT`(默认 1800s)报超时
+- **识别开关**(都在 `build_asr_request()` 里):`enable_itn` 口语数字转阿拉伯数字、`enable_punc` 补标点、`enable_ddc` 语义顺滑(删停顿词/语气词/语义重复词)、`enable_speaker_info` + `show_utterances` 说话人分离。前两个和说话人分离一直开着,`enable_ddc` 是后加的
+- **热词表**:配了 `VOLC_BOOSTING_TABLE_ID` 就走 `corpus.boosting_table_id`。热词是**提示性参数**,引导模型优先考虑这些词,不保证 100% 命中;词表总量上限 5000 词,超出按传入顺序截断。词表本身在控制台维护,本地 `assets/hotwords-ai.txt` 是上传用的底稿
+- **热词 ID 必须在函数内现读**:`.env` 是懒加载的(`api_key()` 调 `load_dotenv()` 才灌进 `os.environ`),写成模块级常量会在 import 时求值,那时 `.env` 还没读——后果是热词**静默失效**,不报错不告警。`upload_to_oss()` 里的 OSS 配置同理
 - **依赖**:`python3`(仅标准库)、`ffmpeg`/`ffprobe`、`oss2`(OSS 上传中转用)
 
 ## 转写之后
@@ -77,5 +81,7 @@ python3 scripts/transcribe.py podcast.mp3 --plain
 - 火山引擎提交/查询返回 `45000131`:超过半小时提交音频总长上限(默认 500 小时),降低提交频率
 - 火山引擎提交/查询返回 `45000132`:单个音频超过 512M
 - 火山引擎提交/查询返回 `45000151`:音频格式不对,检查 ffmpeg 是否正常转出 mp3
+- 返回 `20000003`「no valid speech in audio」:音频里没有有效人声。先 `ffprobe` 看时长——macOS `say` 的部分语音(Eddy/Flo/Reed 这类新版个人语音)离线合成会产出 0.016 秒的空文件,`Tingting`/`Sinji` 正常
 - 结果为空:检查音频是否有人声(`ffprobe` 看时长、`ffmpeg -af volumedetect` 看音量)
+- 热词看起来没生效:依次查三项——`.env` 里有没有 `VOLC_BOOSTING_TABLE_ID`(可用 `python3 -c "import sys;sys.path.insert(0,'scripts');import transcribe;print('corpus' in transcribe.build_asr_request())"` 确认请求体带上了)、控制台词表是否已发布、词条是否符合格式(纯字母数字汉字、少于 10 字)。三项都对仍不变属正常:基础模型本来就认得的词,加热词不会有可见差异,热词只在模型犹豫时起作用
 - 长音频轮询超时:调大 `VOLC_POLL_TIMEOUT`(单位秒),标准版任务最长可能要等 3 小时

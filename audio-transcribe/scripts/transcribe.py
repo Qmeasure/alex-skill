@@ -176,6 +176,30 @@ def volc_request(url: str, key: str, task_id: str, extra_headers: dict, body: di
     return status, message, (json.loads(raw) if raw.strip() else {})
 
 
+def build_asr_request() -> dict:
+    """构造提交任务的 request 对象。
+
+    热词表 ID 必须在这里现读，不能提到模块级常量：.env 是懒加载的
+    （只有 api_key() 里的 load_dotenv() 才灌进 os.environ），模块级常量在
+    import 时就求值，那时 .env 还没读进来。写成常量的后果是热词静默失效
+    ——不报错、不告警，就是不生效。
+    """
+    load_dotenv()
+    req = {
+        "model_name": "bigmodel",
+        "enable_itn": True,       # 口语数字/金额/日期转阿拉伯数字："一九七零年" → "1970 年"
+        "enable_punc": True,      # 补逗号、句号、问号
+        "enable_ddc": True,       # 语义顺滑：删停顿词、语气词、语义重复词
+        "enable_speaker_info": True,
+        "show_utterances": True,  # enable_speaker_info 依赖它才返回说话人
+    }
+    table_id = os.environ.get("VOLC_BOOSTING_TABLE_ID", "").strip()
+    if table_id:
+        # 热词表走控制台自学习平台配置，corpus 与 enable_auto_lang 互斥（本脚本不设后者）
+        req["corpus"] = {"boosting_table_id": table_id}
+    return req
+
+
 def volcengine_transcribe(path: Path, key: str) -> list[dict]:
     """豆包录音文件识别模型 2.0：先中转到 OSS 拿公网 URL，再提交任务、轮询结果。"""
     url, bucket, oss_key = upload_to_oss(path)
@@ -186,13 +210,7 @@ def volcengine_transcribe(path: Path, key: str) -> list[dict]:
             {"X-Api-Sequence": "-1"},
             {
                 "audio": {"url": url, "format": "mp3"},
-                "request": {
-                    "model_name": "bigmodel",
-                    "enable_itn": True,
-                    "enable_punc": True,
-                    "enable_speaker_info": True,
-                    "show_utterances": True,
-                },
+                "request": build_asr_request(),
             },
         )
         if status != VOLC_OK:

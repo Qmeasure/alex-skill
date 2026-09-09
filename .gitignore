@@ -12,3 +12,6 @@ AGENTS.md
 .python-version
 node_modules/
 .scratch/
+
+# 热词底稿：含内部项目名，词表实体在火山引擎控制台
+audio-transcribe/assets/
