@@ -15,6 +15,7 @@
 | 把 Obsidian Markdown 导出成 Word | [`obsidian-to-docx`](./obsidian-to-docx/SKILL.md) | `.docx` | 不研究、不建模、不补写内容 |
 | 复盘上周推荐的股票 | [`pitch-review`](./pitch-review/SKILL.md) | 带行情图的 Markdown 复盘报告 | 不做全市场选股、首次覆盖或估值建模 |
 | 把投资研讨录音转成 Gamma/PPT 大纲 | [`gamma-ppt-outline`](./gamma-ppt-outline/SKILL.md) | 可导入 Gamma 的 Markdown 大纲 | 不输出会议纪要，也不处理没有转录文本的音频 |
+| 把音视频转录稿整理成可读的 Markdown 文档 | [`transcript-md`](./transcript-md/SKILL.md) | 带章节、说话人标注的 `.md` | 不改写成文章、不做纪要提炼；要 PPT 大纲选 `gamma-ppt-outline` |
 | 转录并剪掉播客口误，审核后交付剪映草稿 | [`podcast-editor`](./podcast-editor/SKILL.md) | 剪映音频草稿 | 逐字审核页只是审核工具；不处理视频，也不导出成品音频或 FCPXML |
 | 把长文档整理成适合打印或插入报告的结构图 | [`document-structure-map`](./document-structure-map/SKILL.md) | 纵向结构图 HTML/长图 | 不适合手机转发长图 |
 | 把研究材料做成微信、公众号或手机长图 | [`long-image`](./long-image/SKILL.md) | 1080px 竖版长图，必要时 Internal/External 双版 | 不适合打印版结构图 |
@@ -43,6 +44,7 @@
 
 - **“复盘上周推票”**：用 `pitch-review`。它验证既有推荐是否兑现，不修改原推票，也不替用户重新选股。
 - **“录音整理成 PPT/Gamma”**：用 `gamma-ppt-outline`。必须有 `txt` 或 `srt` 转录文本；内容只能来自录音。
+- **“把转录稿整理成能读的文档”**：用 `transcript-md`。逐字保留原话，只删口语词；保留并加粗说话人，认不出真名时用角色标签，绝不猜。
 - **“剪播客或音频口误”**：用 `podcast-editor`。一个文件按合成音轨处理，多个文件按嘉宾分轨处理；用户逐字确认后生成剪映音频草稿。
 - **“一图看懂这份长文档的结构”**：用 `document-structure-map`。重点是论证骨架、证据链、风险和章节关系。
 - **“做成手机上看的研究长图”**：用 `long-image`。有针对具体标的的评级、估值、目标价或交易建议时，生成 Internal/External 双版。
