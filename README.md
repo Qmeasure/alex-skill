@@ -27,6 +27,7 @@
 | 修改微信公众号文章：核事实、修结构、清元话和改稿痕迹、同步 HTML 跑校验 | [`wechat-article-revise`](./wechat-article-revise/SKILL.md) | 改后的 md 正文、同步过的公众号 HTML、校验与预览产物 | 不适合英文、未成稿的选题构思或纯事实查询 |
 | 为另一个 AI 写执行任务的 prompt | [`directional-prompt-writer`](./directional-prompt-writer/SKILL.md) | 方向性 prompt | 不适合写给人执行的流程文档 |
 | 让 AI 或用户围绕一个方案持续追问、锁定决策 | [`grill-me`](./grill-me/SKILL.md) | 多轮质询对话 | 不生成方案，也不提供降级方案或 mock 数据 |
+| 部署 EdgeOne Pages 时填框架预设、根目录、输出目录、构建/安装命令、环境变量 | [`edgeone-deploy-config`](./edgeone-deploy-config/SKILL.md) | 一张“字段-建议值-依据”对照表 | 不管 CDN、DNS、证书等其他 EdgeOne 产品线；仓库还没建好、代码没推送时先建仓库 |
 
 ## 按需求找入口
 
@@ -59,6 +60,10 @@
 - **“现在的价格、职位、政策、版本是多少”**：按 `verify-before-answer` 先查证，再回答。任何当前事实、具体数字或产品 API 信息都不能只凭记忆。
 - **“帮我写一个给 Claude/GPT 的 prompt”**：用 `directional-prompt-writer`。写目标、方法、约束和质量标准，不把一个想象中的答案写死。
 - **“逼我把方案想清楚”或“grill me”**：用 `grill-me`。它通过连续提问补齐决策树，不接受 Plan B、降级方案或假数据。
+
+### 工程与部署
+
+- **“这个项目部署 EdgeOne 怎么填”**：用 `edgeone-deploy-config`。答案从仓库实际内容（`package.json`、配置文件、lockfile、`.env.example`）里读出来，框架预设以 EdgeOne 界面实际下拉列表为准，不替用户编造选项。
 
 ## 最容易选错的几组
 
