@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""版式线条门：断言页眉线和首页右栏竖线真的存在，且正文里没有多余竖线。
+"""版式线条检查：断言页眉线和首页右栏竖线真的存在，且正文里没有多余竖线。
 
 这一项存在的理由：这两条线原本只写在规范里、只靠「渲染后逐项看」把关。
 本项目里凡是没有脚本断言的版式项，最后都是靠人眼才发现出错的。
@@ -76,7 +76,7 @@ def check(docx):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="版式线条门")
+    ap = argparse.ArgumentParser(description="版式线条检查")
     ap.add_argument("docx", type=Path)
     args = ap.parse_args()
 

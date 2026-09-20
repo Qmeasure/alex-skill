@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""工作代号门：断言交付物里 0 处 beat / miss / seg_A / cons 这类底稿用语。
+"""工作代号检查：断言交付物里 0 处 beat / miss / seg_A / cons 这类底稿用语。
 
 这一项存在的理由：`_data` 底稿和 Excel 里为了处理方便会用短代号，
 读者没读过底稿，看到「seg_A 高于 cons 3.2%」只会一头雾水。它最容易漏在
@@ -35,8 +35,8 @@ PATTERNS = [
     # 分部占位：seg_A / seg1 / 分部1 / 分部A
     re.compile(r"(?<![A-Za-z])seg[_\-]?[A-Za-z0-9](?![A-Za-z])", re.IGNORECASE),
     re.compile(r"分部\s*[A-Za-z0-9]\b"),
-    # staging 批次号：staging_20260814 / batch_03
-    re.compile(r"(?<![A-Za-z])(staging|batch)[_\-]?\d+", re.IGNORECASE),
+    # 暂存表批次号：暂存表_20260814 / batch_03
+    re.compile(r"(?<![A-Za-z])(暂存表|batch)[_\-]?\d+", re.IGNORECASE),
     # 列名式：Q3'26A_vs_est、rev_vs_cons
     re.compile(r"_vs_[A-Za-z]+", re.IGNORECASE),
 ]
@@ -46,7 +46,7 @@ REPLACEMENTS = {
     "cons / consensus": "一致预期",
     "est / 我方est": "本报告此前预测",
     "seg_A / 分部1": "分部的真实披露名称",
-    "staging_* / batch_*": "删掉，不进成品",
+    "暂存表_* / batch_*": "删掉，不进成品",
     "*_vs_est 这类列名": "「vs 本报告预测」",
 }
 
@@ -107,7 +107,7 @@ def main():
         all_hits += scan(Path(f))
 
     if not all_hits:
-        print(f"PASS  工作代号门：{len(args.files)} 个交付物中 0 处底稿用语")
+        print(f"PASS  工作代号检查：{len(args.files)} 个交付物中 0 处底稿用语")
         return 0
 
     print(f"FAIL  {FAILURE}：命中 {len(all_hits)} 处")

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""反编造 lint —— initial-coverage-advanced skill 的交付前阻断门。
+"""反编造 lint —— initial-coverage-advanced skill 的交付前必须通过的检查。
 
-只兜机械可检的编造痕迹，命中即非零退出，逐条要求清除。
+只查得出机械可检的编造痕迹，命中即非零退出，逐条要求清除。
 诚实声明：catch 不住"看起来合理的错数"（如 MAU 写错、目标价过时），
 那一类只能靠异源验证和 _data 底稿核对，不是这个脚本的职责。
 
@@ -45,7 +45,7 @@ PROHIBITION_CONTEXT = re.compile(
     re.IGNORECASE,
 )
 
-# 3) 缺一手结算源的迹象：声称是现价/收盘，但没有日 K 原始序列落盘
+# 3) 缺一手结算源的迹象：声称是现价/收盘，但没有日 K 原始序列存成文件
 PRICE_WORDS = re.compile(r"现价|收盘价|最新价|股价图|指数线|日\s*K|日频")
 RAW_SERIES_HINT = re.compile(
     r"_data|日K|daily|close.*csv|push2his|序列.*csv|"
@@ -114,7 +114,7 @@ def scan_file(path):
     # 只检查负责构建数据/图表的代码。研报正文和版式规范不应被要求自行写出
     # CSV/XLSX 路径；它们的溯源由配套 _data 底稿核验。
     if is_code and PRICE_WORDS.search(text) and not RAW_SERIES_HINT.search(text):
-        hits.append((0, "缺一手源", "提到现价/收盘/股价图，但没看到日 K 原始序列落盘的迹象", ""))
+        hits.append((0, "缺一手源", "提到现价/收盘/股价图，但没看到日 K 原始序列存成文件的迹象", ""))
 
     return hits
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""渲染门：对已渲染的 PDF 断言空白页、首页溢出、首页元素齐全、页数区间、文字越界。
+"""渲染检查：对已渲染的 PDF 断言空白页、首页溢出、首页元素齐全、页数区间、文字越界。
 
 这一项存在的理由：首页溢出把内容挤到第 2 页、留下一张近乎空白的页，
-在开发过程中复发过两次，每次都只有肉眼看渲染图才发现。目视不是门，脚本才是。
+在开发过程中复发过两次，每次都只有肉眼看渲染图才发现。目视靠不住，要用脚本断言。
 
 用法：
     python check_render.py 报告.pdf --earnings           # 业绩更新，14–18 页
@@ -153,7 +153,7 @@ def check(pdf, *, pages_min, pages_max, pre_ipo, sample):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="研报 PDF 渲染门")
+    ap = argparse.ArgumentParser(description="研报 PDF 渲染检查")
     ap.add_argument("pdf", type=Path)
     ap.add_argument("--pages-min", type=int, default=14)
     ap.add_argument("--pages-max", type=int, default=18)
