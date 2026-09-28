@@ -9,6 +9,7 @@
 | 对一家公司做机构级首次覆盖，研报和估值模型一起交付 | [`equity-research-obsidian`](./equity-research-obsidian/SKILL.md) | Obsidian Markdown、Excel 估值模型、`input.json`、决策 memo | 不适合只想导出 Word 或只查一个数据 |
 | 写一份完整的券商风格首次覆盖深度研报 | [`initial-coverage-advanced`](./initial-coverage-advanced/SKILL.md) | DOCX 研报、联动 Excel 模型 | 不适合只做简化损益模型 |
 | 写一份智富界机构版式的首次覆盖深度研报 | [`initial-coverage-institutional`](./initial-coverage-institutional/SKILL.md) | DOCX 研报（25–45 页 / 40–70 图表）、联动 Excel 模型 | 不做业绩更新；只要通用券商版式选 `initial-coverage-advanced` |
+| 同上，但要 tex 源码和 PDF、不要 Word | [`initial-coverage-institutional-tex`](./initial-coverage-institutional-tex/SKILL.md) | tex 工程 + PDF 研报、联动 Excel、底稿 CSV、图表 PNG；全流程不产出 Word / Markdown | 版式与 Word 版一致；需要本机有 Tectonic |
 | 分析一家已覆盖公司刚发布的季报或年报 | [`earnings-analysis-institutional`](./earnings-analysis-institutional/SKILL.md) | DOCX 业绩更新（14–18 页 / 18–25 图表）、预测更新 Excel | 不做首次覆盖，也不适合尚未覆盖的公司 |
 | 已有定性研究，只需要把业务判断做成估值模型 | [`valuation-model`](./valuation-model/SKILL.md) | Excel 估值模型、`input.json`、决策 memo | 不适合纯定性研究或单纯套 DCF 模板 |
 | 给公司做五年净利润、成本和盈亏平衡预测 | [`one-page-model`](./one-page-model/SKILL.md) | 一页式 Excel 损益模型 | 不做 DCF、可比估值或精细三表联动 |
@@ -36,7 +37,8 @@
 
 - **“研报 + 估值模型一起做”**：用 `equity-research-obsidian`。它是 Obsidian 输出主线，模型结果是报告估值数字的唯一来源。
 - **“写深度研报，最终交 Word”**：用 `initial-coverage-advanced`。它按五个阶段完成公司研究、盈利预测、估值、图表和 DOCX 组装。
-- **“要智富界机构版式的深度研报”**：用 `initial-coverage-institutional`。五阶段流程与 `initial-coverage-advanced` 相同，差别在版式和门禁：每页 logo 与机构名、首页左摘要右投资数据双栏、正文窄栏而图表占满版心，交付前跑渲染门和版式线条门。
+- **“要智富界机构版式的深度研报”**：用 `initial-coverage-institutional`。五阶段流程与 `initial-coverage-advanced` 相同，差别在版式和交付前检查：每页 logo 与机构名、首页左摘要右投资数据双栏、正文窄栏而图表占满版心，交付前跑渲染检查和版式线条检查，不通过就不交付。
+- **“机构版式研报，但要 tex 和 PDF”**：用 `initial-coverage-institutional-tex`。流程和版式与 Word 版相同，排版换成 LaTeX（Tectonic 编译），表格和关键数字从 Excel 导出成 tex，全流程不产出 Word 或 Markdown 文件。
 - **“已覆盖的公司刚出财报”**：用 `earnings-analysis-institutional`。只写新增信息：实际值 vs 我方预测 vs 一致预期的三口径对照、差异归因、指引解读、预测与目标价的旧新对照。
 - **“已有研报，接着做估值”**：用 `valuation-model`。核心链条是业务驱动量、需求或 TAM、营收、利润、至少两种估值方法、隐含股价。
 - **“只想估算五年利润或什么时候盈利”**：用 `one-page-model`。它只做损益预测，不做估值。
@@ -69,18 +71,19 @@
 
 ## 最容易选错的几组
 
-### 三种首次覆盖 Skill
+### 四种首次覆盖 Skill
 
-三者都能做首次覆盖，研究深度同级，差别在交付端和版式：
+四者都能做首次覆盖，研究深度同级，差别在交付端和版式：
 
 - 要 Obsidian Markdown，并且报告、估值模型和决策 memo 同目录交付，选 `equity-research-obsidian`。
 - 要通用券商风格 DOCX 和联动 Excel，选 `initial-coverage-advanced`。
-- 要智富界机构版式（每页 logo 与机构名、首页双栏、蓝白配色、正文窄栏、交付前有脚本门），选 `initial-coverage-institutional`。
+- 要智富界机构版式（每页 logo 与机构名、首页双栏、蓝白配色、正文窄栏、交付前有脚本检查），选 `initial-coverage-institutional`。
+- 同一套机构版式，但交付 tex 源码和 PDF、不要 Word 与 Markdown，选 `initial-coverage-institutional-tex`。
 - `equity-research-obsidian` 会复用 `initial-coverage-advanced` 的研究、写作和质检规范，但不是两个 Skill 同时独立跑一遍。
 
 ### `initial-coverage-institutional` 和 `earnings-analysis-institutional`
 
-版式、配色和门禁脚本是同一套，分工按覆盖阶段：
+版式、配色和交付前检查脚本是同一套，分工按覆盖阶段：
 
 - 第一次写这家公司，选 `initial-coverage-institutional`。它从公司概况讲起，25–45 页。
 - 公司已经覆盖过、这次只是财报出来了，选 `earnings-analysis-institutional`。它只写新增信息，不重复公司背景，14–18 页。

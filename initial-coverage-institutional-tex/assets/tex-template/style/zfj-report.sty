@@ -1,0 +1,352 @@
+% zfj-report.sty —— 智富界机构版式（首次覆盖研报）
+% 版式数值与 references/TeX版式标准.md 一一对应；改这里之前先改那份标准。
+% 用法：main.tex 里 \documentclass{ctexart} 之后 \usepackage{style/zfj-report}。
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{style/zfj-report}[2026/09/28 ZFJ institutional report layout]
+
+\RequirePackage{xfp}
+\RequirePackage[a4paper,top=1.8cm,bottom=1.6cm,left=1.2cm,right=1.2cm,
+  headheight=0bp,headsep=0bp,footskip=0bp,nomarginpar]{geometry}
+\RequirePackage{xcolor}
+\RequirePackage{graphicx}
+\RequirePackage{eso-pic}
+\RequirePackage{tabularray}
+\RequirePackage{enumitem}
+\RequirePackage[hidelinks,bookmarksnumbered=false]{hyperref}
+
+% ---------------------------------------------------------------- 字体
+% 中文用思源宋体；西文和数字走 ctex 默认字体，不另设。
+\setCJKmainfont{Source Han Serif CN}[BoldFont={Source Han Serif CN Bold}]
+
+% ---------------------------------------------------------------- 配色
+\definecolor{zfjDeep}{HTML}{1B3A6B}    % 标题、表头底、页眉线、页码、右栏数据值
+\definecolor{zfjBright}{HTML}{2B6EF2}  % 评级与目标价、横幅粗线、右栏分隔线
+\definecolor{zfjTint}{HTML}{F2F6FC}    % 表格隔行、目标公司行
+\definecolor{zfjGray}{HTML}{666666}    % 来源、口径等小字
+\definecolor{zfjRule}{HTML}{D9D9D9}    % 表内横线、首页右栏浅灰分隔线
+
+% ---------------------------------------------------------------- 尺寸常量
+% 1 DXA = 0.05bp。版心 10546 DXA = 527.3bp ≈ 18.6cm。
+\newdimen\zfjBodyL  \zfjBodyL=7.1bp      % 正文左缩进 142 DXA
+\newdimen\zfjBodyR  \zfjBodyR=160.2bp    % 正文右缩进 3204 DXA → 行宽 12.7cm
+\newdimen\zfjHalfW  \zfjHalfW=263.62bp   % 双图并列每格：版心一半（原 5273 DXA）
+\newdimen\zfjColL   \zfjColL=358.55bp    % 首页左栏 7171 DXA
+\newdimen\zfjColM   \zfjColM=21.1bp      % 首页中间留白 422 DXA
+\newdimen\zfjSidePad \zfjSidePad=10bp    % 首页右栏左内边距 200 DXA
+\newdimen\zfjRuleW  \zfjRuleW=0.48bp     % 0.5bp 线（Word 粗细 4）
+
+% ---------------------------------------------------------------- 行高模型
+% 与 Word 渲染对齐：单倍行高 = 1.867 × 字号；行顶到基线 = 1.371 × 字号；
+% 多倍行距只把多出的高度加在基线下方。段间距取「上段段后」与「下段段前」的较大值。
+\def\zfj@k{1.867}
+\def\zfj@a{1.371}
+\def\zfj@L#1#2{\fpeval{#1*\zfj@k*#2}bp}           % 行高
+\def\zfj@A#1{\fpeval{#1*\zfj@a}bp}                 % 行顶到基线
+\def\zfj@D#1#2{\fpeval{#1*\zfj@k*#2-#1*\zfj@a}bp}  % 基线到行底
+% Word for Mac 导出 PDF 时字形尺寸吸附到 0.24bp 的整数倍（9bp → 9.12bp，8bp → 7.92bp），
+% 行高仍按标称字号算。断行要和 Word 版一致，字形尺寸就用吸附后的值。
+\def\zfj@q#1{\fpeval{round(#1/0.24)*0.24}bp}
+\newcommand\zfjfont[2]{\fontsize{\zfj@q{#1}}{\zfj@L{#1}{#2}}\selectfont}
+\def\zfj@strutA#1{\vrule width\z@ height\zfj@A{#1} depth\z@\relax}
+\def\zfj@strutD#1#2{\vrule width\z@ height\z@ depth\zfj@D{#1}{#2}\relax}
+
+% ctexart 默认把行距整体放大 1.3 倍；这里的行高已按 Word 实测给出，放大系数归 1
+\linespread{1}
+% 正文：9bp，1.25 倍，段后 3bp，两端对齐，无首行缩进
+\renewcommand\normalsize{\@setfontsize\normalsize{\zfj@q{9}}{\zfj@L{9}{1.25}}}
+\normalsize
+\newdimen\zfj@Dbody \zfj@Dbody=\zfj@D{9}{1.25}
+\setlength\parindent{0bp}
+\setlength\parskip{3bp}
+\setlength\topskip{\zfj@A{9}}
+\setlength\emergencystretch{1em}
+\raggedbottom
+
+% 正文窄栏：全局左右缩进，图表、表格、首页各块在自己的盒子里归零
+\newcommand\zfjnarrow{\leftskip=\zfjBodyL \rightskip=\zfjBodyR \relax}
+\newcommand\zfjwide{\leftskip=\z@ \rightskip=\z@ \relax}
+\AtBeginDocument{\zfjnarrow}
+
+% ---------------------------------------------------------------- 块间距状态机
+% 每个非正文块（标题、图注、图、表、首页元素）结束时登记两个量：
+%   \zfj@lastfixed  —— 一定要加的距离（如表后的空段）
+%   \zfj@lastafter  —— 段后距离，和下一块的段前取较大值
+% 正文段落由 para/before 钩子接上这两个量。
+\newdimen\zfj@lastfixed
+\newdimen\zfj@lastafter
+\newif\ifzfj@pending
+
+\def\zfj@blockstart#1{% #1 = 段前
+  \par
+  \ifzfj@pending\else
+    \ifdim\prevdepth>-1000bp
+      \ifdim\prevdepth=\zfj@Dbody\else\kern\dimexpr\zfj@Dbody-\prevdepth\relax\fi
+    \fi
+    \global\zfj@lastfixed=\z@
+    \global\zfj@lastafter=\parskip
+  \fi
+  \global\zfj@pendingfalse
+  \dimen@=#1\relax
+  \ifdim\zfj@lastafter>\dimen@ \dimen@=\zfj@lastafter\fi
+  \vskip\dimexpr\zfj@lastfixed+\dimen@\relax
+  \nointerlineskip}
+\def\zfj@blockend#1#2{% #1 = 段后，#2 = 固定追加
+  \par
+  \global\zfj@lastafter=#1\relax
+  \global\zfj@lastfixed=#2\relax
+  \global\zfj@pendingtrue
+  \prevdepth=-1000bp\relax}
+\AddToHook{para/before}{%
+  \ifzfj@pending
+    \global\zfj@pendingfalse
+    \vskip\dimexpr\zfj@lastfixed+\zfj@lastafter-\parskip\relax
+    \prevdepth=\zfj@Dbody
+  \fi}
+% 盒子（首页栏、表格单元格）内部从干净状态开始
+\def\zfj@boxinit{\global\zfj@pendingtrue\global\zfj@lastfixed=\z@\global\zfj@lastafter=\z@
+  \prevdepth=-1000bp\relax}
+
+% 两栏并排用 \vtop 顶端对齐，但 \vtop 高度为 0，放在页首会被 \topskip 往下推。
+% 外面包一层 \vbox 并以 \kern 结尾，整块高度就等于内容高度。
+\long\def\zfj@topbox#1{\vbox{#1\kern\z@}}
+
+% Word 段落：\zfj@wpar{对齐 l/c/r/j}{字号}{倍数}{段前}{段后}{字体命令}{内容}
+\def\zfj@align#1{%
+  \if#1l\rightskip=\z@ plus 1fil\parfillskip=\z@ plus 1fil\fi
+  \if#1c\leftskip=\z@ plus 1fil\rightskip=\z@ plus 1fil\parfillskip=\z@\fi
+  \if#1r\leftskip=\z@ plus 1fil\parfillskip=\z@\fi
+  \if#1j\parfillskip=\z@ plus 1fil\fi}
+\long\def\zfj@wpar#1#2#3#4#5#6#7{%
+  \zfj@blockstart{#4}%
+  {\parskip\z@\zfjwide\zfj@align{#1}\zfjfont{#2}{#3}#6%
+   \noindent\zfj@strutA{#2}#7\zfj@strutD{#2}{#3}\par}%
+  \zfj@blockend{#5}{\z@}}
+
+% ---------------------------------------------------------------- 标题
+% H1 13bp / H2 10.5bp / H3 9.5bp，加粗深蓝，1.15 倍，左缩进同正文，不限右宽
+\newcounter{zfj@bm}
+\def\zfj@heading#1#2#3#4#5{% 级别 字号 段前 段后 标题
+  \zfj@blockstart{#3}%
+  \stepcounter{zfj@bm}\pdfbookmark[#1]{#5}{zfjbm.\arabic{zfj@bm}}%
+  {\parskip\z@\leftskip=\zfjBodyL\rightskip=\z@ plus 1fil\parfillskip=\z@ plus 1fil
+   \zfjfont{#2}{1.15}\bfseries\color{zfjDeep}%
+   \noindent\zfj@strutA{#2}#5\zfj@strutD{#2}{1.15}\par}%
+  \nobreak
+  \zfj@blockend{#4}{\z@}\nobreak}
+\RenewDocumentCommand\section{s m}{\zfj@heading{1}{13}{10bp}{6bp}{#2}}
+\RenewDocumentCommand\subsection{s m}{\zfj@heading{2}{10.5}{8bp}{4bp}{#2}}
+\RenewDocumentCommand\subsubsection{s m}{\zfj@heading{3}{9.5}{6bp}{3bp}{#2}}
+
+% ---------------------------------------------------------------- 图表编号与图注
+% 图和表共用一个「图表 N」序列；首页与 Key data 页的表不编号。
+\newcounter{zfjfig}
+\newcommand\zfjcaptiontext[1]{\stepcounter{zfjfig}图表 \arabic{zfjfig}：#1}
+% 图注：图下方，8.5bp 加粗居中，1.15 倍，段前 3bp、段后 6bp
+\def\zfj@figcap#1{{\parskip\z@\zfjwide\zfj@align{c}\zfjfont{8.5}{1.15}\bfseries
+  \noindent\zfj@strutA{8.5}\zfjcaptiontext{#1}\zfj@strutD{8.5}{1.15}\par}}
+
+% 单图：占满 18.6cm 版心，图与图注不分页
+\newcommand\zfjfig[2]{% 文件 图注
+  \zfj@blockstart{3bp}%
+  \vbox{\hsize=\textwidth\zfjwide\parskip\z@
+    \hbox to\textwidth{\includegraphics[width=\textwidth]{#1}}%
+    \nointerlineskip\vskip3bp
+    \zfj@figcap{#2}}%
+  \zfj@blockend{6bp}{\z@}}
+
+% 双图并列：每格 9.3cm，图宽占满该格，各自图注在下
+\def\zfj@paircell#1#2{%
+  \if\relax\detokenize{#1}\relax\vtop{\kern\z@\hbox to\zfjHalfW{}}\else\zfj@paircellx{#1}{#2}\fi}
+\def\zfj@paircellx#1#2{%
+  \vtop{\hsize=\zfjHalfW\zfjwide\parskip\z@
+    \kern\z@\kern3bp
+    \hbox to\zfjHalfW{\includegraphics[width=\zfjHalfW]{#1}}%
+    \nointerlineskip\vskip3bp
+    \zfj@figcap{#2}\vskip6bp}}
+\newcommand\zfjfigpair[4]{% 左图 左图注 右图 右图注（右图留空则右格空白）
+  \zfj@blockstart{3bp}%
+  \zfj@topbox{\hbox to\textwidth{\zfj@paircell{#1}{#2}\hss\zfj@paircell{#3}{#4}}}%
+  \zfj@blockend{\z@}{\z@}}
+
+% ---------------------------------------------------------------- 表格
+% 表格由 scripts/export_excel_to_tex.py 生成，正文里只 \input，不手写。
+% 表头 8bp 加粗白字深蓝底；隔行浅蓝；首列左对齐、其余居中；
+% 上下各一条 0.48bp 深蓝线，行间 0.25bp 浅灰线；无竖线；口径小字 7bp 灰，跨列末行。
+% 表格标题：本页剩余空间放不下「标题 + 表头 + 前两行」就先换页，标题不与表体分家
+% 判断前先放一个可断点，让 TeX 把放不下的前文先结算到上一页，\pagetotal 才是本页真实用量；
+% 紧跟在标题后（上一项是 \nobreak）时不放，标题与表格不拆开
+\def\zfj@needspace#1{\par
+  \ifnum\lastpenalty<\@M \penalty\z@ \fi
+  \ifdim\dimexpr\pagegoal-\pagetotal\relax<#1\relax\newpage\fi}
+\newcommand\zfjtablecaption[1]{%
+  \zfj@needspace{110bp}%
+  \zfj@wpar{c}{8.5}{1.15}{6bp}{3bp}{\bfseries}{\zfjcaptiontext{#1}}\nobreak}
+% tabularray 开表时会插入段间距，表内外都清零
+\newcommand\zfjtablebegin{\zfj@blockstart{\z@}\begingroup\zfjwide\parskip\z@}
+% 表后 Word 有一个段前 3bp 的空段（单倍 9bp 行高）
+\newcommand\zfjtableend{\endgroup\zfj@blockend{\z@}{\dimexpr3bp+\zfj@L{9}{1}\relax}}
+\newcommand\zfjtablekeyend{\endgroup\zfj@blockend{\z@}{\z@}}
+% 三种单元格：standard（正文表）/ compact（Key data 主表）/ half（Key data 半宽表）
+\newcommand\zfjcellfont[1]{\parskip\z@\zfjfont{#1}{1.1}}
+% tabularray 的行高支柱取表格外层字号，所以进表前先切到单元格字号；
+% 外层行距和行间距清零，否则空的表头模板盒子和第一行之间会补一段行间胶
+\newdimen\zfj@colsep
+\newcommand\zfjtablefont[2]{\zfjfont{#1}{1.1}\baselineskip\z@\lineskip\z@\lineskiplimit\z@
+  \zfj@colsep=#2bp\relax}
+% 单元格里的西文 / 数字串：与 Word 一致，放不下时先借用两侧内边距（居中伸出），
+% 超过「列宽 + 两侧内边距」才逐字符折行。#1 = 对齐 l/c，#2 = 原串，#3 = 逐字符可断的版本
+\newcommand\zfjtok[3]{%
+  \setbox\z@\hbox{#2}%
+  \ifdim\wd\z@>\dimexpr\linewidth+2\zfj@colsep\relax
+    #3%
+  \else\ifdim\wd\z@>\linewidth
+    \if#1l\makebox[\linewidth][l]{\box\z@}\else\makebox[\linewidth][c]{\box\z@}\fi
+  \else
+    \box\z@
+  \fi\fi}
+\NewTblrTheme{zfj}{%
+  \SetTblrTemplate{head}{empty}%
+  \SetTblrTemplate{foot}{empty}}
+\SetTblrOuter[longtblr]{theme=zfj,presep=0bp,postsep=0bp,headsep=0bp,footsep=0bp}
+
+% ---------------------------------------------------------------- 分页
+% 与 Word 的「段落内分页符」一致：本页放得下那一空行，就留在本页再分页；
+% 放不下，空行挪到下一页顶部（下一页首行因此下移一个单倍行高）。
+\newcommand\zfjpagebreak{%
+  \par\penalty\z@
+  \dimen@=\dimexpr\pagetotal+\zfj@lastfixed+\zfj@lastafter+\zfj@L{9}{1}\relax
+  \ifdim\dimen@>\pagegoal
+    \newpage
+    \zfj@blockstart{\z@}\hbox{\vrule width\z@ height\zfj@L{9}{1} depth\z@}\zfj@blockend{\z@}{\z@}%
+  \else
+    \newpage
+  \fi}
+
+% ---------------------------------------------------------------- 首页
+% 一区：品牌横幅（logo | 智富界 | 报告类型 + 日期），下方 1.44bp 亮蓝线
+\newcommand\zfjbanner[2]{% 报告类型 日期
+  \zfj@blockstart{\z@}%
+  \hbox to\textwidth{\zfjwide
+    \vbox to 45.69bp{\kern2bp
+      \hbox to\textwidth{%
+        \hbox to 45bp{\includegraphics[height=1.4cm]{brand/zhifujie-logo.png}\hss}%
+        \vbox to 39.69bp{\vss\hbox to 160bp{\hskip6bp\zfjfont{16}{1}\bfseries\color{zfjDeep}%
+            \zfj@strutA{16}智富界\zfj@strutD{16}{1}\hss}\vss}%
+        \hss
+        \vbox to 39.69bp{\vss\hsize=322.3bp\zfjwide\parskip\z@
+          \zfj@boxinit
+          \zfj@wpar{r}{9}{1}{\z@}{\z@}{\color{zfjDeep}}{#1}%
+          \zfj@wpar{r}{7}{1}{\z@}{\z@}{\color{zfjGray}}{#2}%
+          \vss}}%
+      \vss}\hss}%
+  \nointerlineskip
+  {\color{zfjBright}\hrule height 1.44bp}%
+  \zfj@blockend{\z@}{\z@}}
+
+% 二区：标题区
+\newcommand\zfjcovertitle[3]{% 主标题 副标题 股票标识
+  \zfj@wpar{l}{20}{1.25}{7bp}{2bp}{\bfseries}{#1}%
+  \zfj@wpar{l}{10}{1.16667}{\z@}{3bp}{\color{zfjGray}}{#2}%
+  \zfj@wpar{l}{9}{1.08333}{\z@}{6bp}{\bfseries\color{zfjDeep}}{#3}}
+
+% 三区：左摘要 | 留白 | 竖线 + 右投资数据块，三栏顶端对齐
+\newcommand\zfjcovergrid[2]{% 左栏内容 右栏内容
+  \zfj@blockstart{\z@}%
+  \zfj@topbox{\hbox to\textwidth{\zfjwide
+    \vtop{\kern\z@\hsize=\zfjColL\zfjwide\parskip\z@\zfj@boxinit #1\par
+      \vskip\zfj@lastafter\kern\z@}%
+    \hskip\dimexpr\zfjColM-0.5\zfjRuleW\relax
+    {\color{zfjDeep}\vrule width\zfjRuleW}%
+    \hskip\dimexpr\zfjSidePad-0.5\zfjRuleW\relax
+    \vtop{\kern\z@\hsize=\dimexpr\textwidth-\zfjColL-\zfjColM-\zfjSidePad\relax
+      \zfjwide\parskip\z@\zfj@boxinit #2\par\kern\z@}\hss}}%
+  \zfj@blockend{\z@}{\z@}}
+
+% 左栏摘要段：加粗领起句 + 展开，8.5bp，行距 280/240，段后 5bp，两端对齐
+\newcommand\zfjlead[2]{%
+  \zfj@wpar{j}{8.5}{1.16667}{\z@}{5bp}{}{\textbf{#1}#2}}
+
+% 右栏：区块标签、键值行、分隔线、窄图、研究团队块
+\newdimen\zfj@kvW \newdimen\zfj@kvL
+\newcommand\zfjailabel{%
+  \zfj@wpar{l}{8}{1}{\z@}{\z@}{\bfseries\color{zfjBright}}{AI 投资建议}%
+  \zfj@hline{zfjBright}{\zfjRuleW}{2bp}{2bp}}
+% 右栏里的横线：Word 用行距 exact 6bp 的空段加下边框
+\def\zfj@hline#1#2#3#4{% 颜色 粗细 段前 段后
+  \zfj@blockstart{#3}\kern6bp{\color{#1}\hrule height#2}\zfj@blockend{#4}{\z@}}
+\newcommand\zfjsplit{\zfj@hline{zfjRule}{\zfjRuleW}{2bp}{2bp}}
+\newcommand\zfjteamsplit{\zfj@hline{zfjBright}{0.72bp}{2bp}{3bp}}
+% 键值行：标签 1280 DXA 左对齐灰色，数值其余宽度右对齐；上下内边距 26 DXA
+\newcommand\zfjkv[3]{% 标签 数值 数值颜色
+  \zfj@kvW=\hsize \zfj@kvL=64bp
+  \zfj@blockstart{\z@}\kern1.3bp
+  \hbox to\zfj@kvW{%
+    \vtop{\hsize=\zfj@kvL\zfj@boxinit\zfj@wpar{l}{8}{1}{\z@}{\z@}{\color{zfjGray}}{#1}}%
+    \vtop{\hsize=\dimexpr\zfj@kvW-\zfj@kvL\relax\zfj@boxinit
+      \zfj@wpar{r}{8}{1}{\z@}{\z@}{\color{#3}}{#2}}}%
+  \kern1.3bp\zfj@blockend{\z@}{\z@}}
+% 右栏窄图：宽 4.7cm，左对齐，段前 5bp 段后 2bp
+\newcommand\zfjsidechart[1]{%
+  \zfj@blockstart{5bp}\hbox{\includegraphics[width=4.7cm]{#1}}\zfj@blockend{2bp}{\z@}}
+% AI 研究团队块：文案写死，不逐份改
+\newcommand\zfjteam{%
+  \zfjteamsplit
+  \zfj@wpar{l}{8}{1}{\z@}{0.5bp}{\bfseries\color{zfjBright}}{AI 研究团队}%
+  \zfj@wpar{l}{7}{1}{\z@}{1bp}{\color{zfjGray}}{本报告由 AI 生成}%
+  \zfj@wpar{l}{10}{1}{\z@}{\z@}{\bfseries}{董AI}%
+  \zfj@wpar{l}{8}{1}{\z@}{1bp}{\color{zfjGray}}{alex.dong@l2y.com}%
+  \zfj@wpar{l}{10}{1}{\z@}{\z@}{\bfseries}{李菲特}%
+  \zfj@wpar{l}{8}{1}{\z@}{3bp}{\color{zfjGray}}{lester.li@l2y.com}%
+  \zfj@blockstart{\z@}\hbox to\hsize{\hss\includegraphics[width=1.9cm]{brand/zhifujie-qrcode.png}\hss}%
+  \zfj@blockend{\z@}{\z@}%
+  \zfj@wpar{c}{7}{1}{\z@}{1bp}{\color{zfjGray}}{扫码加入社群}}
+
+% ---------------------------------------------------------------- 第 2 页：Key data
+\newcommand\zfjkeydatatitle[1][Key data｜盈利预测及估值摘要]{%
+  \zfj@wpar{l}{13}{1.15}{\z@}{5bp}{\bfseries\color{zfjDeep}}{#1}}
+% 主表后 Word 有一个段前 6bp 的空段
+\newcommand\zfjkeydatagap{\zfj@blockstart{6bp}\kern\zfj@L{9}{1}\zfj@blockend{\z@}{\z@}}
+\newcommand\zfjkeydatablock[1]{% 小节标题
+  \zfj@wpar{l}{8.5}{1}{\z@}{2bp}{\bfseries\color{zfjDeep}}{#1}}
+\newcommand\zfjkeydataspace{\zfj@blockstart{5bp}\kern\zfj@L{9}{1}\zfj@blockend{\z@}{\z@}}
+% 下半两栏，每栏 9.3cm；左栏右内边距、右栏左内边距各 6bp，表宽扣掉内边距
+\newdimen\zfjHalfTableW \zfjHalfTableW=\dimexpr\zfjHalfW-6bp\relax
+\newcommand\zfjkeydatagrid[2]{%
+  \zfj@blockstart{\z@}%
+  \zfj@topbox{\hbox to\textwidth{\zfjwide
+    \vtop{\kern\z@\hsize=\zfjHalfTableW\zfjwide\parskip\z@\zfj@boxinit #1\par\kern\z@}\hss
+    \vtop{\kern\z@\hsize=\zfjHalfTableW\zfjwide\parskip\z@\zfj@boxinit #2\par\kern\z@}}}%
+  \zfj@blockend{\z@}{\z@}}
+
+% ---------------------------------------------------------------- 阶段稿件
+% 阶段 1 / 3 的独立稿件：首页顶部一行大标题 + 灰色副行，正文同终稿
+% 稿件没有品牌横幅，首页也画页眉
+\newif\ifzfj@headfirst
+\newcommand\zfjdrafttitle[3]{% 稿件类型 公司 日期
+  \global\zfj@headfirsttrue
+  \zfj@wpar{l}{20}{1.25}{\z@}{2bp}{\bfseries}{#2 · #1}%
+  \zfj@wpar{l}{10}{1.16667}{\z@}{6bp}{\color{zfjGray}}{智富界 AI 研究团队 · #3}%
+  \zfj@blockstart{\z@}{\color{zfjBright}\hrule height 1.44bp}\zfj@blockend{6bp}{\z@}}
+
+% ---------------------------------------------------------------- 列表
+% 真编号列表，随正文左缩进；悬挂缩进 360 DXA，文字距左 720 DXA
+\setlist{topsep=\z@,partopsep=\z@,parsep=\z@,itemsep=\parskip,leftmargin=36bp,labelwidth=18bp,
+  labelsep=0bp,align=left}
+\setlist[itemize]{label=•}
+
+% ---------------------------------------------------------------- 页眉页脚
+% 首页不带页眉；其余页右上角 logo 0.5cm + 智富界 9bp 加粗深蓝，下方 0.5bp 深蓝线。
+% 页码右对齐，9bp 深蓝，每页都有。位置按 Word 页眉页脚距边 0.8cm 实测换算。
+\pagestyle{empty}
+\def\zfj@pagetop{841.89bp}
+\newcommand\zfj@headfoot{%
+  \setlength\unitlength{1bp}%
+  \ifnum\ifzfj@headfirst 2\else\value{page}\fi>1
+    \put(561.26,804.69){\makebox[0bp][r]{\zfjfont{9}{1}\bfseries\color{zfjDeep}%
+      \raisebox{0.25bp}{\includegraphics[height=0.5cm]{brand/zhifujie-logo.png}}\hskip2.3bp 智富界}}%
+    \put(32.64,799.89){\color{zfjDeep}\rule{530.16bp}{\zfjRuleW}}%
+  \fi
+  \put(561.26,27.33){\makebox[0bp][r]{\zfjfont{9}{1}\color{zfjDeep}\thepage}}}
+\AddToShipoutPictureFG{\zfj@headfoot}
+
+\endinput

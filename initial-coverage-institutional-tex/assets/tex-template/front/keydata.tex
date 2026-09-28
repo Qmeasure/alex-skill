@@ -1,0 +1,16 @@
+% 第 2 页 Key data：四块数据收在一页，不写论述。表格全部由 Excel「报告表格」导出。
+% Pre-IPO 分支把「基本状况」换成「发行方案与股权结构」。
+\zfjkeydatatitle
+\input{tables/kd_main}
+\zfjkeydatagap
+\zfjkeydatagrid{%
+  \zfjkeydatablock{基本状况}
+  \input{tables/kd_basic}
+  \zfjkeydataspace
+  \zfjkeydatablock{现金流量表与资产负债表摘要}
+  \input{tables/kd_cfbs}
+}{%
+  \zfjkeydatablock{利润表摘要}
+  \input{tables/kd_is}
+}
+\zfjpagebreak

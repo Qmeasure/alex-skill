@@ -1,0 +1,13 @@
+% 首页右栏（已上市）。十个元素顺序固定，不增不减：
+% AI 投资建议标签 → 评级 → 目标价 → 当前价 → 上行空间 → 浅灰细线 → 总市值 → 日均成交
+% → 相对表现图 → 亮蓝分隔线 + AI 研究团队块（\zfjteam 自带）
+\zfjailabel
+\zfjkv{投资评级}{\Rating}{zfjBright}
+\zfjkv{目标价}{\TargetPrice}{zfjBright}
+\zfjkv{\PriceLabel}{\Price}{zfjDeep}
+\zfjkv{上行空间}{\Upside}{zfjDeep}
+\zfjsplit
+\zfjkv{总市值}{\MarketCap}{zfjDeep}
+\zfjkv{日均成交 3M}{\ADV}{zfjDeep}
+\zfjsidechart{figures/cover_rel_perf.png}
+\zfjteam

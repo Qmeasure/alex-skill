@@ -1,0 +1,20 @@
+% 智富界首次覆盖研报 · 主文件
+% 这里只做装配：版式在 style/，数字与表格由 Excel 导出到 data/ 和 tables/，
+% 正文按章放在 chapters/。编译与全部检查：
+%   python <skill>/scripts/build_report.py <本目录> --name <公司>_首次覆盖_<日期>
+\documentclass{ctexart}
+\usepackage{style/zfj-report}
+
+\input{data/keyfigures}   % 生成物：Excel「报告数字」sheet
+\input{front/meta}        % 标题、副标题、股票标识、报告日期
+
+\begin{document}
+\input{front/cover}
+\input{front/keydata}
+
+% 正文按章 \input，顺序按投资逻辑链，章名与文件名一一对应
+\input{chapters/01-overview}
+\input{chapters/02-industry}
+\input{chapters/03-drivers}
+\input{chapters/04-forecast-valuation}
+\end{document}
